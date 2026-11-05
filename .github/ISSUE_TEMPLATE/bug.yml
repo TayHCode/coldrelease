@@ -1,0 +1,10 @@
+name: Bug report
+description: Report a reproducible problem without private data
+body:
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Synthetic reproduction, expected result and actual result
+      description: Use fake data. Do not attach private reports or matched values.
+    validations:
+      required: true

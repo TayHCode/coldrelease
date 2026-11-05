@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coldrelease"
+version = "0.1.0"
+description = "Check whether an agent-made repository is safe to publish, then export it with fresh history and a receipt"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = []
+
+[project.scripts]
+coldrelease = "release_check:main"
+
+[tool.setuptools]
+py-modules = ["release_check", "release_workflow"]

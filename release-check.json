@@ -1,0 +1,134 @@
+{
+  "exclude": [],
+  "approvals": [
+    {
+      "scope": "tree",
+      "kind": "home-path",
+      "path": "release_check.py",
+      "fingerprint": "a541acfac2e64958"
+    },
+    {
+      "scope": "tree",
+      "kind": "home-path",
+      "path": "release_check.py",
+      "fingerprint": "b9f44d4003eb7eda"
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "release_check.py",
+      "fingerprint": "3de132cd98be7bf2"
+    },
+    {
+      "scope": "tree",
+      "kind": "ipv6",
+      "path": "release_check.py",
+      "fingerprint": "71546855d6279ef7"
+    },
+    {
+      "scope": "tree",
+      "kind": "tailnet-ip",
+      "path": "release_check.py",
+      "fingerprint": "4b2228c26597aeca"
+    },
+    {
+      "scope": "history",
+      "kind": "home-path",
+      "path": "release_check.py",
+      "fingerprint": "a541acfac2e64958"
+    },
+    {
+      "scope": "history",
+      "kind": "home-path",
+      "path": "release_check.py",
+      "fingerprint": "b9f44d4003eb7eda"
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "release_check.py",
+      "fingerprint": "3de132cd98be7bf2"
+    },
+    {
+      "scope": "history",
+      "kind": "ipv6",
+      "path": "release_check.py",
+      "fingerprint": "71546855d6279ef7"
+    },
+    {
+      "scope": "history",
+      "kind": "tailnet-ip",
+      "path": "release_check.py",
+      "fingerprint": "4b2228c26597aeca"
+    }
+  ],
+  "quickstart": [
+    {
+      "file": "README.md",
+      "line": 19,
+      "argv": [
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "."
+      ]
+    },
+    {
+      "file": "README.md",
+      "line": 20,
+      "argv": [
+        "coldrelease",
+        "--help"
+      ]
+    },
+    {
+      "file": "README.md",
+      "line": 26,
+      "argv": [
+        "coldrelease",
+        "--requirements"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "role": "tests",
+      "argv": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_audit_rework.py",
+        "-k",
+        "_cli_",
+        "-v"
+      ]
+    },
+    {
+      "role": "tests",
+      "argv": [
+        "python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-q"
+      ]
+    },
+    {
+      "role": "syntax",
+      "argv": [
+        "python",
+        "-m",
+        "compileall",
+        "-q",
+        "release_check.py"
+      ]
+    }
+  ]
+}
