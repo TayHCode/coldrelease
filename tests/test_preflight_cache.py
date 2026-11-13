@@ -13,14 +13,14 @@ import test_release_check as fixtures
 
 class PreflightCacheTests(unittest.TestCase):
     def setUp(self):
-        self.fixture = fixtures.AuditTests()
-        self.fixture.setUp()
-        self.addCleanup(self.fixture.doCleanups)
-        self.repo = self.fixture.repo
-        self.manifest = self.fixture.manifest
-        self.terms = self.fixture.terms
-        self.cache_home = self.fixture.root / 'cache'
-        environment = patch.dict(os.environ, {'XDG_CACHE_HOME': str(self.cache_home)})
+        self.testbed = fixtures.AuditTests()
+        self.testbed.setUp()
+        self.addCleanup(self.testbed.doCleanups)
+        self.repo = self.testbed.repo
+        self.manifest = self.testbed.manifest
+        self.terms = self.testbed.terms
+        self.xdg_home = self.testbed.root / 'xdg'
+        environment = patch.dict(os.environ, {'XDG_CACHE_HOME': str(self.xdg_home)})
         environment.start()
         self.addCleanup(environment.stop)
 
@@ -31,7 +31,7 @@ class PreflightCacheTests(unittest.TestCase):
         output = io.StringIO()
         with redirect_stdout(output):
             code = rc.main(['preflight', str(self.repo), '--run', 'cache-test',
-                            '--denylist', str(self.fixture.denylist), *flags])
+                            '--denylist', str(self.testbed.denylist), *flags])
         return code, json.loads(output.getvalue())
 
     def test_cached_uncached_pass_and_fail_are_identical(self):
@@ -66,7 +66,7 @@ class PreflightCacheTests(unittest.TestCase):
 
     def test_raw_content_invalidates_despite_git_eol_normalization(self):
         (self.repo / '.gitattributes').write_text('*.md text eol=lf\n')
-        self.fixture.commit('Normalize text')
+        self.testbed.commit('Normalize text')
         self.preflight()
         path = self.repo / 'README.md'
         path.write_bytes(path.read_bytes().replace(b'\n', b'\r\n'))
@@ -89,7 +89,7 @@ class PreflightCacheTests(unittest.TestCase):
             self.assert_miss()
 
     def test_checker_code_change_invalidates(self):
-        checker = self.fixture.root / 'checker.py'
+        checker = self.testbed.root / 'checker.py'
         checker.write_bytes(Path(rc.__file__).read_bytes())
         with patch.object(rc, '__file__', str(checker)):
             self.preflight()
@@ -110,7 +110,7 @@ class PreflightCacheTests(unittest.TestCase):
         self.assertEqual(self.cli(), expected)
         with patch.object(rc, 'license_audit', side_effect=AssertionError('cache miss')):
             self.assertEqual(self.cli(), expected)
-        for path in (self.fixture.denylist, self.repo / 'release-check.json'):
+        for path in (self.testbed.denylist, self.repo / 'release-check.json'):
             path.write_bytes(path.read_bytes() + b'\n')
             with patch.object(rc, 'license_audit', wraps=rc.license_audit) as audit:
                 self.assertEqual(self.cli(), expected)
@@ -130,7 +130,7 @@ class PreflightCacheTests(unittest.TestCase):
 
     def test_corrupt_or_unavailable_cache_reruns_checks(self):
         expected = self.preflight()
-        entry = next(self.cache_home.rglob('*.json'))
+        entry = next(self.xdg_home.rglob('*.json'))
         for contents in ('invalid JSON', '{}', '{"data": null}', entry.read_text().replace('"status":"pass"', '"status":"blocked"')):
             entry.write_text(contents)
             self.assertEqual(self.assert_miss(), expected)
@@ -140,25 +140,25 @@ class PreflightCacheTests(unittest.TestCase):
         self.assertEqual(self.assert_miss(), expected)
 
     def test_cache_inside_source_is_disabled_and_never_exported(self):
-        other = self.fixture.root / 'other-repo'
-        rc.git(self.fixture.root, 'init', '-q', str(other))
+        other = self.testbed.root / 'other-repo'
+        rc.git(self.testbed.root, 'init', '-q', str(other))
         for repository in (self.repo, other):
             with patch.dict(os.environ, {'XDG_CACHE_HOME': str(repository / 'cache')}):
                 with patch.object(workflow, 'preflight_cache_key', side_effect=AssertionError('cache used')):
                     self.assertEqual(self.preflight()['outcome'], 'PASS')
             self.assertFalse((repository / 'cache').exists())
         self.preflight()
-        entry = next(self.cache_home.rglob('*.json'))
+        entry = next(self.xdg_home.rglob('*.json'))
         self.assertEqual(entry.stat().st_mode & 0o777, 0o600)
         self.assertNotIn('HiddenPerson', entry.read_text())
-        target = self.fixture.root / 'export'
+        target = self.testbed.root / 'export'
         rc.copy_tree(self.repo, target, self.manifest, rc.Scanner(self.terms))
         self.assertFalse((target / 'cache').exists())
         self.assertEqual(rc.git(target, 'rev-list', '--count', 'HEAD').strip(), b'1')
 
     def test_binary_bun_conversion_is_never_cached(self):
         (self.repo / 'bun.lockb').write_bytes(b'not a real lockfile')
-        self.fixture.commit('Binary lock fixture')
+        self.testbed.commit('Binary lock testbed')
         with patch.object(workflow, 'preflight_cache_key', side_effect=AssertionError('cache used')):
             self.preflight()
             self.assert_miss()
@@ -168,15 +168,15 @@ class PreflightCacheTests(unittest.TestCase):
         names += [f'file-{number}.txt' for number in range(250)]
         for name in names:
             (self.repo / name).write_text(name)
-        self.fixture.git('--literal-pathspecs', 'add', '--', *names)
-        self.fixture.git('commit', '-q', '-m', 'Literal filenames')
-        target = self.fixture.root / 'batch-export'
+        self.testbed.git('--literal-pathspecs', 'add', '--', *names)
+        self.testbed.git('commit', '-q', '-m', 'Literal filenames')
+        target = self.testbed.root / 'batch-export'
         rc.copy_tree(self.repo, target, self.manifest, rc.Scanner(self.terms))
         exported = {os.fsdecode(path) for path in rc.git(target, 'ls-tree', '-r', '--name-only', '-z', 'HEAD').split(b'\0') if path}
         self.assertTrue(set(names).issubset(exported))
         for name in names:
             self.assertEqual((target / name).read_text(), name)
-        empty = self.fixture.root / 'empty-export'
+        empty = self.testbed.root / 'empty-export'
         rc.copy_tree(self.repo, empty, self.manifest, rc.Scanner(self.terms), allowlist=[])
         self.assertEqual(rc.git(empty, 'ls-tree', '-r', '--name-only', 'HEAD'), b'')
         self.assertEqual(rc.git(empty, 'rev-list', '--count', 'HEAD').strip(), b'1')

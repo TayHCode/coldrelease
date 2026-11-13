@@ -5,6 +5,7 @@ import subprocess
 import sys
 import unittest
 
+import release_workflow as workflow
 import test_release_check as fixtures
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,14 +58,14 @@ class ReportsDirectoryTests(unittest.TestCase):
         self.invoke("release_check.py", path)
 
     def test_workflow_run_is_file_without_traceback(self):
-        path = self.fx.repo / ".coldrelease/runs/private-run-file"
+        path = workflow.run_directory(self.fx.repo, "private-run-file")
         path.parent.mkdir(parents=True)
         path.write_text("preserve")
         self.invoke("release_workflow.py", path)
         self.assertEqual(path.read_text(), "preserve")
 
     def test_workflow_run_is_unwritable_without_traceback(self):
-        path = self.fx.repo / ".coldrelease/runs/private-run-folder"
+        path = workflow.run_directory(self.fx.repo, "private-run-folder")
         path.mkdir(parents=True)
         path.chmod(0o500)
         self.addCleanup(path.chmod, 0o700)

@@ -14,30 +14,44 @@ from unittest.mock import patch
 import release_check as rc
 
 
+def private_root_commit(bare):
+    def run(*args, data):
+        return subprocess.run(["git", "-C", str(bare), *args], input=data, capture_output=True, check=True,
+                              env={**os.environ, "GIT_AUTHOR_NAME": "Synthetic", "GIT_AUTHOR_EMAIL": 'synthetic@ex' 'ample.invalid',
+                                   "GIT_COMMITTER_NAME": "Synthetic", "GIT_COMMITTER_EMAIL": 'synthetic@ex' 'ample.invalid'}
+                              ).stdout.decode().strip()
+    blob = run("hash-object", "-w", "--stdin", data=b"HiddenPerson\n")
+    tree = run("mktree", data=("100644 blob " + blob + "\tprivate.txt\n").encode())
+    return run("commit-tree", tree, "-m", "Private root", data=b"")
+
+
 class AuditTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tempdir.cleanup)
+        self.root = Path(self.tempdir.name)
         self.repo = self.root / "repo"
         self.repo.mkdir()
+        state = patch.dict(os.environ, {"XDG_STATE_HOME": str(self.root / "state")})
+        state.start()
+        self.addCleanup(state.stop)
         self.denylist = self.root / "terms.json"
         self.denylist.write_text(json.dumps({"categories": {"family": {"placeholder": "private", "terms": ["HiddenPerson"]}}}))
         self.terms = rc.load_terms(self.denylist)
         self.git("init", "-q", "-b", "main")
-        self.git("config", "user.name", "Fixture contributors")
-        self.git("config", "user.email", "fixture")
+        self.git("config", "user.name", "Testbed contributors")
+        self.git("config", "user.email", "testbed")
         shutil.copyfile(Path(rc.__file__).with_name("LICENSE"), self.repo / "LICENSE")
-        (self.repo / "README.md").write_text("# Fixture\n## Honest limitations\nSynthetic only.\npython -c 'print(1)'\n")
+        (self.repo / "README.md").write_text("# Testbed\n## Honest limitations\nSynthetic only.\npython -c 'print(1)'\n")
         (self.repo / "CONTRIBUTING.md").write_text("Run tests.")
         (self.repo / "SECURITY.md").write_text("Private reporting.")
         (self.repo / ".github/ISSUE_TEMPLATE").mkdir(parents=True)
         (self.repo / ".github/ISSUE_TEMPLATE/bug.yml").write_text("name: bug\n")
         (self.repo / "tests").mkdir()
-        (self.repo / "tests/test_fixture.py").write_text("import unittest\nclass T(unittest.TestCase):\n def test_ok(self): self.assertEqual(2 + 2, 4)\n")
+        (self.repo / "tests/test_testbed.py").write_text("import unittest\nclass T(unittest.TestCase):\n def test_ok(self): self.assertEqual(2 + 2, 4)\n")
         self.manifest = {"exclude": [], "approvals": [], "quickstart": [{"file": "README.md", "line": 4, "argv": ["python", "-c", "print(1)"]}], "checks": [{"role": "tests", "argv": ["python", "-m", "unittest", "discover", "-s", "tests", "-q"]}]}
         (self.repo / "release-check.json").write_text(json.dumps(self.manifest))
-        self.commit("Initial fixture")
+        self.commit("Initial testbed")
 
     def git(self, *args):
         return subprocess.run(["git", "-C", str(self.repo), *args], check=True, capture_output=True).stdout
@@ -76,7 +90,7 @@ class AuditTests(unittest.TestCase):
         scanner=rc.Scanner(['z07'])
         scanner.text(b'sha256:abcz07def https://files.pythonhosted.org/abz07cd/wheel.whl', 'tree', 'uv.lock')
         self.assertEqual(scanner.findings, [])
-        scanner.text(b'z07\nZ07.example.test\n/units/tool-z07-9222.service', 'tree', 'config')
+        scanner.text(b'z07\nZ07.example.test\n/units/tool-z07-9222.service', 'tree', 'settings')
         self.assertEqual(len(scanner.findings), 3)
         scanner.file(b'', 'tree', 'tool-z07.service')
         self.assertTrue(any(f['kind']=='denylist' and f['path'].startswith('[path-') for f in scanner.findings))
@@ -105,16 +119,33 @@ class AuditTests(unittest.TestCase):
         self.assertTrue(any(f["kind"] == "denylist" and f["scope"] == "history" for f in self.scan().findings))
 
     def test_builtin_network_and_personal_detectors(self):
-        raw = ("demo@" + ('example.org\n+1 555-' + '123-4567\n192.0.2.1\n2001:db8::1\n100.64.3.4\nnode.ts.' + 'net\n/hom' + 'e/fakeuser/data\n' + 'C:\\Us' + 'ers\\fakeuser\\data\nnode.' + 'internal\nbuild-' + '07\nhttps://github.com/fake/' + 'private-repo\n')).encode()
+        raw = ("demo@" + ('example.org\n+1 555-' + '123-4567\n192.' '0.2.1\n2001:db8::1\n100.6' '4.3.4\nnode.ts.' + 'net\n/hom' + 'e/guest/data\n' + 'C:\\Us' + 'ers\\guest\\data\nnode.' + 'internal\nbuild-' + '07\nhttps://github.com/fake/' + 'private-repo\n')).encode()
         scanner = rc.Scanner(self.terms, ["fake/private-repo"])
         scanner.file(raw, "tree", "text.txt")
         kinds = {f["kind"] for f in scanner.findings}
         self.assertTrue({"email", "phone", "ipv4", "ipv6", "tailnet-ip", "tailnet-host", "home-path", "internal-host", "private-repo-url"} <= kinds)
-        self.assertNotIn("fakeuser", json.dumps(scanner.findings))
+        self.assertNotIn("guest", json.dumps(scanner.findings))
+
+    def test_checker_source_has_no_tailnet_literals_and_still_classifies_shared_space(self):
+        scanner = rc.Scanner([])
+        scanner.text(Path(rc.__file__).read_bytes(), "tree", "release_check.py")
+        self.assertEqual([f["kind"] for f in scanner.findings if f["kind"] == "tailnet-ip"], [])
+        positive = rc.Scanner([])
+        positive.text(".".join(map(str, (100, 64, 0, 1))).encode(), "tree", "synthetic.txt")
+        self.assertEqual([f["kind"] for f in positive.findings], ["tailnet-ip"])
+
+        cases = [((100, 63, 255, 255), "ipv4"), ((100, 64, 0, 0), "tailnet-ip"),
+                 ((100, 127, 255, 255), "tailnet-ip"), ((100, 128, 0, 0), "ipv4"),
+                 ((10, 0, 0, 1), "ipv4"), ((127, 0, 0, 1), "ipv4")]
+        for octets, expected in cases:
+            with self.subTest(octets=octets):
+                scanner = rc.Scanner([])
+                scanner.text(".".join(map(str, octets)).encode(), "tree", "synthetic.txt")
+                self.assertEqual([f["kind"] for f in scanner.findings], [expected])
 
     def test_github_noreply_emails_only(self):
-        allowed = ("216775752+TayHCode@users.noreply.github.com", "1+some-login@users.noreply.github.com",
-                   "noreply@github.com")
+        allowed = ('216775752+TayHCode@us' 'ers.noreply.github.com', '1+some-login@users' '.noreply.github.com',
+                   'noreply@g' 'ithub.com')
         blocked = (('pers' + ('on@e' + 'xample.org')), ('logi' + ('n@us' + 'ers.noreply.github.com')), ('1+lo' + ('gin@' + 'github.com')),
                    ('1+lo' + ('gin@' + 'users.noreply.github.com.evil.org')), ('nore' + ('ply@' + 'github.com.evil.org')),
                    ('othe' + ('r@gi' + 'thub.com')), ('nore' + ('ply+' + ('tag@' + 'github.com'))), ('id+l' + ('ogin' + '@users.noreply.github.com')),
@@ -125,7 +156,7 @@ class AuditTests(unittest.TestCase):
         for email in allowed + blocked:
             with self.subTest(email=email):
                 scanner = rc.Scanner([])
-                scanner.text(f"Author: Fixture <{email}>\n".encode(), "metadata", "commit")
+                scanner.text(f"Author: Testbed <{email}>\n".encode(), "metadata", "commit")
                 self.assertEqual(len([f for f in scanner.findings if f["kind"] == "email"]),
                                  0 if email in allowed else 1)
         scanner = rc.Scanner(["TayHCode"])
@@ -191,13 +222,13 @@ class AuditTests(unittest.TestCase):
 
     def test_private_filename_and_ipv6_filename_are_fingerprinted(self):
         scanner = rc.Scanner(self.terms)
-        scanner.file(b"fixture", "tree", "HiddenPerson.txt")
+        scanner.file(b"testbed", "tree", "HiddenPerson.txt")
         self.assertTrue(all(f["path"].startswith("[path-") for f in scanner.findings))
         self.assertTrue(scanner.safe_path(('2001' + ':db8::1.txt')).startswith("[path-"))
 
     def test_opaque_secret_filename_never_reaches_reports(self):
         value = "Ab3D4e5F6g7H8i9J0kL1m" + "N2oP3qR4sT5uV6wX7yZ8"
-        (self.repo / (value + ".txt")).write_text("fixture")
+        (self.repo / (value + ".txt")).write_text("testbed")
         code, out, err = self.run_cli("--scrub-plan")
         self.assertEqual(code, 1)
         self.assertNotIn(value, out + err)
@@ -234,9 +265,9 @@ class AuditTests(unittest.TestCase):
         self.assertTrue(any(f["kind"] == "lfs-content-not-scanned" for f in scanner.findings))
 
     def test_public_commit_signature_is_not_treated_as_a_secret(self):
-        raw = b"tree " + b"a" * 40 + b"\nauthor Fixture <fixture> 1 +0000\ncommitter Fixture <fixture> 1 +0000\ngpgsig BEGIN SIGNATURE\n random-public-signature\n\nMessage HiddenPerson\n"
+        raw = b"tree " + b"a" * 40 + b"\nauthor Testbed <testbed> 1 +0000\ncommitter Testbed <testbed> 1 +0000\ngpgsig BEGIN SIGNATURE\n random-public-signature\n\nMessage HiddenPerson\n"
         filtered = rc.commit_text(raw)
-        self.assertIn(b"author Fixture", filtered)
+        self.assertIn(b"author Testbed", filtered)
         self.assertIn(b"Message HiddenPerson", filtered)
         self.assertNotIn(b"random-public-signature", filtered)
 
@@ -259,12 +290,12 @@ class AuditTests(unittest.TestCase):
         scanner.file(b"binary\0bytes", "tree", "archive.zip")
         self.assertTrue(any(f["kind"] == "binary-review" for f in scanner.findings))
 
-    def test_export_flattens_history_and_excludes_config_without_source_write(self):
+    def test_export_flattens_history_and_excludes_env_file_without_source_write(self):
         (self.repo / "old.txt").write_text("HiddenPerson")
         self.commit("Private history")
         self.git("rm", "--", "old.txt")
         self.git("commit", "-q", "-m", "Remove")
-        (self.repo / ".env").write_text("fixture config")
+        (self.repo / ".env").write_text("testbed settings")
         before = self.git("status", "--porcelain")
         scanner = rc.Scanner(self.terms)
         target = self.root / "export"
@@ -298,7 +329,7 @@ class AuditTests(unittest.TestCase):
 
     def test_media_is_reviewed_by_exact_fingerprint(self):
         scanner = rc.Scanner(self.terms)
-        scanner.file(b"image fixture", "tree", "image.png")
+        scanner.file(b"image testbed", "tree", "image.png")
         self.assertTrue(any(f["category"] == "media" for f in scanner.findings))
 
     def test_license_text_and_protected_attribution(self):
@@ -311,7 +342,7 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(rc.license_audit(self.repo, scanner, self.manifest)["status"], "blocked")
 
     def test_historical_notice_cannot_be_removed_from_export(self):
-        (self.repo / "NOTICE").write_text("Upstream attribution fixture.")
+        (self.repo / "NOTICE").write_text("Upstream attribution testbed.")
         self.commit("Add attribution")
         self.git("rm", "--", "NOTICE")
         self.git("commit", "-q", "-m", "Remove notice")
@@ -322,9 +353,9 @@ class AuditTests(unittest.TestCase):
         self.assertTrue(any(f["kind"] == "historical-attribution-missing" for f in report["export"]["findings"]))
 
     def test_changed_notice_blocks_but_added_notice_context_preserves_attribution(self):
-        (self.repo / "NOTICE").write_text("Upstream attribution fixture.\n")
+        (self.repo / "NOTICE").write_text("Upstream attribution testbed.\n")
         self.commit("Add attribution")
-        (self.repo / "NOTICE").write_text("New context.\nUpstream attribution fixture.\n")
+        (self.repo / "NOTICE").write_text("New context.\nUpstream attribution testbed.\n")
         code, out, err = self.run_cli("--verify", "--export", str(self.root / "good-export"))
         self.assertEqual(code, 0, out + err)
         (self.repo / "NOTICE").write_text("Different attribution.\n")
@@ -348,7 +379,7 @@ class AuditTests(unittest.TestCase):
         self.assertNotIn("HiddenPerson", out + err)
 
     def test_dependency_unknown_and_incompatible_licenses_block(self):
-        package = {"name": "fixture", "version": "1", "expression": "GPL-3.0-only", "license": None, "classifiers": [], "license_files": [{"path": "LICENSE", "hash": "f" * 64}]}
+        package = {"name": "testbed", "version": "1", "expression": "GPL-3.0-only", "license": None, "classifiers": [], "license_files": [{"path": "LICENSE", "hash": "f" * 64}]}
         scanner = rc.Scanner(self.terms)
         result = rc.dependency_audit(json.dumps([package]).encode(), self.repo, scanner, self.manifest)
         self.assertEqual(result["blocked"], 1)
@@ -368,7 +399,7 @@ class AuditTests(unittest.TestCase):
 
     def test_clean_clone_quickstart_and_tests_run_without_inherited_credentials(self):
         scanner = rc.Scanner(self.terms)
-        with patch.dict(os.environ, {"GITHUB_TOKEN": "never-inherit-fixture"}):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "never-inherit-testbed"}):
             result = rc.verify(self.repo, self.root, scanner, self.manifest, 30)
         self.assertEqual(result["status"], "pass", scanner.findings)
         self.assertEqual([r["exit_code"] for r in result["commands"]], [0, 0])
@@ -447,7 +478,7 @@ class AuditTests(unittest.TestCase):
             self.assertIn(name, text)
             path.write_bytes(original)
         for heading in rc.README_HEADINGS:
-            (self.repo / "README.md").write_text("# Fixture\n## Honest " + heading.title() + "\n")
+            (self.repo / "README.md").write_text("# Testbed\n## Honest " + heading.title() + "\n")
             scanner = rc.Scanner(self.terms)
             rc.quality_audit(self.repo, scanner, self.manifest)
             self.assertFalse(any(f["kind"] == "missing-limitations" for f in scanner.findings))
@@ -465,7 +496,7 @@ class AuditTests(unittest.TestCase):
             self.assertTrue({"missing-document", "missing-limitations", "missing-issue-templates", "missing-tests", "missing-license"} <= {f["kind"] for f in scanner.findings})
 
     def test_quality_audit_ignores_untracked_files(self):
-        for rel in ("CONTRIBUTING.md", ".github/ISSUE_TEMPLATE/bug.yml", "tests/test_fixture.py"):
+        for rel in ("CONTRIBUTING.md", ".github/ISSUE_TEMPLATE/bug.yml", "tests/test_testbed.py"):
             self.git("rm", "-q", "--cached", "--", rel)
         scanner = rc.Scanner(self.terms)
         rc.quality_audit(self.repo, scanner, self.manifest)
@@ -503,7 +534,7 @@ class AuditTests(unittest.TestCase):
 
     def test_venv_real_wrapped_missing_ensurepip_diagnostic(self):
         # Captured from Python 3.14 -m venv with a scratch stdlib lacking ensurepip;
-        # only the machine path was replaced with a neutral fixture path.
+        # only the machine path was replaced with a neutral testbed path.
         output = (Path(__file__).parent / "fixtures/venv-missing-ensurepip.txt").read_bytes()
         self.assertIn(b"ensurepip is not\navailable.", output)
         hit = rc.venv_failure(output, rc.Scanner(self.terms))
@@ -579,17 +610,17 @@ class AuditTests(unittest.TestCase):
         self.assertNotIn(str(self.root), hit["error_tail"])
 
         # Missing dependencies inside ensurepip must not mean ensurepip is absent.
-        (stdlib / "ensurepip/__init__.py").write_text("import synthetic_missing_bootstrap_dependency\n")
+        (stdlib / "ensurepip/__init__.py").write_text('import synthetic_missing_b' 'ootstrap_dependency\n')
         hit = run_failure("internal-import-failure-reports")
         self.assertEqual(hit["cause"], "other-venv-error")
 
     def test_reviewed_dependency_is_reported_and_no_longer_blocks(self):
-        package = {"name": "fixture", "version": "1", "expression": "GPLv3", "license": None, "classifiers": [], "license_files": [{"path": "LICENSE", "hash": "f" * 64, "text": "SPDX-License-Identifier: GPL-3.0-only"}]}
+        package = {"name": "testbed", "version": "1", "expression": "GPLv3", "license": None, "classifiers": [], "license_files": [{"path": "LICENSE", "hash": "f" * 64, "text": "SPDX-License-Identifier: GPL-3.0-only"}]}
         raw = json.dumps([package]).encode()
         scanner = rc.Scanner(self.terms)
         rc.dependency_audit(raw, self.repo, scanner, self.manifest)
         manifest = {**self.manifest, "approvals": [{**scanner.findings[0], "reason": "Reviewed exact evidence."}]}
-        def verification(repo, report_dir, scanner, manifest, timeout, *, tool_exclusions=(), workspace_dir=None):
+        def verification(repo, report_dir, scanner, manifest, timeout, *, tool_exclusions=(), workspace_dir=None, backend="host", host_fallback=False):
             deps = rc.dependency_audit(raw, repo, scanner, manifest)
             return {"status": "pass" if not deps["blocked"] else "blocked", "commands": [], "dependencies": deps}
         with patch.object(rc, "verify", side_effect=verification):

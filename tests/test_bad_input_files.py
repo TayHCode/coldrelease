@@ -10,6 +10,7 @@ import test_release_check as fixtures
 
 ROOT = Path(__file__).resolve().parents[1]
 SHAPE = "denylist must be a JSON list, {terms: [...]} or {categories: ...}"
+PATTERN_SHAPE = "denylist patterns must be a list of {kind, pattern} with a new lowercase kind and a regex whose every match is at least one character"
 NO_GIT = "repository path is not a git repository"
 NO_DIR = "repository path does not exist or is not a directory"
 
@@ -72,6 +73,21 @@ class BadInputFilesTests(unittest.TestCase):
             "number.json": ('["PrivateTerm", 3]', "denylist has a blank or non-text term", "denylist-schema"),
             "broken.json": ('["PrivateTerm", ', "denylist file is not valid JSON", "audit-incomplete", "JSONDecodeError"),
         }
+        bad_patterns = {
+            "patterns-object.json": {"owner-rule": "x"},
+            "patterns-built-in-kind.json": [{"kind": "email", "pattern": "x"}],
+            "patterns-duplicate-kind.json": [{"kind": "owner-rule", "pattern": "x"}, {"kind": "owner-rule", "pattern": "y"}],
+            "patterns-upper-kind.json": [{"kind": "Owner", "pattern": "x"}],
+            "patterns-extra-key.json": [{"kind": "owner-rule", "pattern": "x", "category": "secrets"}],
+            "patterns-bad-regex.json": [{"kind": "owner-rule", "pattern": "("}],
+            "patterns-empty-match.json": [{"kind": "owner-rule", "pattern": "x*"}],
+            "patterns-zero-width.json": [{"kind": "owner-rule", "pattern": "(?=secret)"}],
+            "patterns-variable-lookbehind.json": [{"kind": "owner-rule", "pattern": "(?<=a+)b"}],
+            "patterns-incomplete-kind.json": [{"kind": "manual-review", "pattern": "x"}],
+            "patterns-not-text.json": [{"kind": "owner-rule", "pattern": 3}],
+        }
+        for name, patterns in bad_patterns.items():
+            cases[name] = (json.dumps({"terms": ["PrivateTerm"], "patterns": patterns}), PATTERN_SHAPE, "denylist-schema")
         for script in ("release_check.py", "release_workflow.py"):
             for name, (text, reason, error, *detail) in cases.items():
                 with self.subTest(script=script, name=name):

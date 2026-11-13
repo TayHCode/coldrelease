@@ -4,7 +4,7 @@ import release_check as rc
 
 
 class PlaceholderUrlTests(unittest.TestCase):
-    def scan(self, source, path='config.py', scope='tree', terms=()):
+    def scan(self, source, path='settings.py', scope='tree', terms=()):
         scanner = rc.Scanner(list(terms))
         scanner.file(source.encode(), scope, path)
         return scanner.findings
@@ -29,14 +29,14 @@ class PlaceholderUrlTests(unittest.TestCase):
     def test_raw_ambiguous_and_encoded_urls_stay_blocking(self):
         for source, path in (
             (('https://user:pass' + '@example.test/api'), 'readme.txt'),
-            (('# https://user:pass' + '@example.test/api'), 'config.py'),
-            (('url = "https://user:pass' + '@example.test/api"\nif'), 'config.py'),
-            (('url = "https://user:p%61ss' + '@example.test/api"'), 'config.py'),
-            (('url = "https://user:pass' + '@ex%61mple.test/api"'), 'config.py'),
-            (('url = "https://user:pass' + '@example.test/api%20path"'), 'config.py'),
-            (('url = "https://user:pass' + ('@exam' + ('ple.' + ('test' + '@actual.example.com/api"')))), 'config.py'),
-            (('url = r"https://user:pass' + '@example.test\\@actual.org/api"'), 'config.py'),
-            (('url = "http' + 's://user:pass' + '@example.test/api" "suffix"'), 'config.py'),
+            (('# https://user:pass' + '@example.test/api'), 'settings.py'),
+            (('url = "https://user:pass' + '@example.test/api"\nif'), 'settings.py'),
+            (('url = "https://user:p%61ss' + '@example.test/api"'), 'settings.py'),
+            (('url = "https://user:pass' + '@ex%61mple.test/api"'), 'settings.py'),
+            (('url = "https://user:pass' + '@example.test/api%20path"'), 'settings.py'),
+            (('url = "https://user:pass' + ('@exam' + ('ple.' + ('test' + '@actual.example.com/api"')))), 'settings.py'),
+            (('url = r"https://user:pass' + '@example.test\\@actual.org/api"'), 'settings.py'),
+            (('url = "http' + 's://user:pass' + '@example.test/api" "suffix"'), 'settings.py'),
         ):
             with self.subTest(source=source, path=path):
                 self.assertTrue(self.credentials(source, path=path))

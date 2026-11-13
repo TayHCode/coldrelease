@@ -63,6 +63,30 @@ class HeuristicReviewTests(unittest.TestCase):
         changed.file(raw + b'// changed\n', 'tree', 'example.ts')
         self.assertFalse(next(f for f in changed.findings if f['kind'] == 'assigned-secret')['reviewed'])
 
+    def test_credential_url_review_binds_the_exact_occurrence(self):
+        url = 'https:' + '//admin:<pass' + 'word>@db.example.org/app'
+        raw = f'connect {url} or {url}\nconnect {url}\n'.encode()
+        initial = rc.Scanner([])
+        initial.file(raw, 'tree', 'notes.md')
+        found = [f for f in initial.findings if f['kind'] == 'credential-url']
+        self.assertEqual(len(found), 3)
+        approval = {key: found[0][key] for key in ('scope', 'kind', 'path', 'fingerprint', 'source_sha256', 'line', 'column')}
+        approval.update(classification='false-positive', reason='Placeholder password in documentation.')
+        reviewed = rc.Scanner([], approvals=[approval])
+        reviewed.file(raw, 'tree', 'notes.md')
+        self.assertEqual([f['reviewed'] for f in reviewed.findings if f['kind'] == 'credential-url'], [True, False, False])
+        plain = {key: approval[key] for key in ('scope', 'kind', 'path', 'fingerprint')}
+        rejected = [{**approval, **changed} for changed in (
+            {'source_sha256': '0' * 64}, {'line': 3}, {'column': None}, {'fingerprint': '0' * 16},
+            {'classification': None}, {'reason': ''})] + [plain]
+        for candidate in rejected:
+            scanner = rc.Scanner([], approvals=[candidate])
+            scanner.file(raw, 'tree', 'notes.md')
+            self.assertFalse(any(f['reviewed'] for f in scanner.findings if f['kind'] == 'credential-url'), candidate)
+        edited = rc.Scanner([], approvals=[approval])
+        edited.file(raw + b'edited\n', 'tree', 'notes.md')
+        self.assertFalse(any(f['reviewed'] for f in edited.findings if f['kind'] == 'credential-url'))
+
     def test_explicit_secret_shapes_cannot_be_approved(self):
         raw = ('ghp_' + 'Ab1Cd2Ef3Gh4' * 3).encode()
         initial = rc.Scanner([])

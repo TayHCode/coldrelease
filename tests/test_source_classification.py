@@ -6,7 +6,7 @@ import release_check as rc
 class SourceClassificationTests(unittest.TestCase):
     def scan(self, text, path='module.py', scope='tree', encoding='utf-8', terms=(), repos=()):
         scanner = rc.Scanner(list(terms), private_repos=list(repos))
-        scanner.file(text.encode(encoding), scope, path, object_id='fixture')
+        scanner.file(text.encode(encoding), scope, path, object_id='testbed')
         return scanner.findings
 
     def hosts(self, text, **kwargs):
@@ -15,7 +15,7 @@ class SourceClassificationTests(unittest.TestCase):
     def test_attributes_only_at_their_source_occurrences(self):
         for scope in ('tree', 'history'):
             with self.subTest(scope=scope):
-                self.assertEqual(self.hosts(('self' + '.home\nself' + '.local\nself.config' + '.home\n'), scope=scope), [])
+                self.assertEqual(self.hosts(('self' + '.home\nself' + '.local\nself.settings' + '.home\n'), scope=scope), [])
                 self.assertEqual(self.hosts(('self' + ('.home\n"self' + ('.home"\n# self' + '.home\n'))), scope=scope), [2, 3])
                 self.assertEqual(self.hosts(('self' + ('.local; "self' + ('.local" # self' + '.local\n'))), scope=scope), [1])
 
@@ -38,9 +38,9 @@ class SourceClassificationTests(unittest.TestCase):
         self.assertEqual(self.hosts(('"serv' + ('er.l' + 'ocal"\n# data') + ('base' + '.internal\n'))), [1, 2])
 
     def test_paths_terms_and_explicit_secrets_are_not_exempt(self):
-        self.assertTrue(self.hosts(('self' + '.home'), path=('self' + '.home/config.py')))
+        self.assertTrue(self.hosts(('self' + '.home'), path=('self' + '.home/settings.py')))
         for encoding in ('utf-8', 'utf-16'):
-            findings = self.scan(('self' + '.home\n"/hom' + 'e/fixture/config"\n"api_key=synt' + 'hetic-password"'),
+            findings = self.scan(('self' + '.home\n"/hom' + 'e/testbed/settings"\n"api_key=synt' + 'hetic-password"'),
                                  encoding=encoding, terms=[('self' + '.home')])
             self.assertTrue({'denylist', 'home-path', 'assigned-secret'} <= {f['kind'] for f in findings})
         self.assertTrue(self.hosts(('self' + '.home\n"serv' + ('er.l' + 'ocal"')), encoding='utf-16'))
@@ -59,10 +59,10 @@ class SourceClassificationTests(unittest.TestCase):
     def test_internal_known_private_urls_and_query_secrets_still_scan(self):
         for url in (('http' + 's://gitl' + ('ab.i' + 'nternal/team/public')), ('git@' + 'gitl' + ('ab.i' + 'nternal:team/public'))):
             self.assertIn('private-repo-url', [f['kind'] for f in self.scan(repr(url))])
-        findings = self.scan('"https://github.com/fixture/hidden?visibility=private"', repos=['fixture/hidden'])
+        findings = self.scan('"https://github.com/testbed/hidden?visibility=private"', repos=['testbed/hidden'])
         self.assertIn('private-repo-url', [f['kind'] for f in findings])
         findings = self.scan(('"https://example.invalid/public?private=yes&api_key=synt' + 'hetic-password"'))
         self.assertIn('assigned-secret', [f['kind'] for f in findings])
         self.assertNotIn('private-repo-url', [f['kind'] for f in findings])
-        findings = self.scan('"https://example.invalid/public?next=fixture/hidden"', repos=['fixture/hidden'])
+        findings = self.scan('"https://example.invalid/public?next=testbed/hidden"', repos=['testbed/hidden'])
         self.assertIn('private-repo-url', [f['kind'] for f in findings])

@@ -4,7 +4,7 @@ import release_check as rc
 
 
 class AssignedExpressionTests(unittest.TestCase):
-    def scan(self, source, path='config.py', scope='tree'):
+    def scan(self, source, path='settings.py', scope='tree'):
         scanner = rc.Scanner([])
         scanner.file(source.encode(), scope, path)
         return [f for f in scanner.findings if f['kind'] == 'assigned-secret']
@@ -21,8 +21,8 @@ class AssignedExpressionTests(unittest.TestCase):
         self.assertEqual([f['line'] for f in self.scan(source)], [2, 3])
 
     def test_invalid_python_and_other_file_types_still_block(self):
-        for source, path in ((('password = cred' + 'entials.value'), 'config.env'),
-                             (('password = cred' + 'entials.value\nif'), 'config.py')):
+        for source, path in ((('password = cred' + 'entials.value'), 'settings.env'),
+                             (('password = cred' + 'entials.value\nif'), 'settings.py')):
             with self.subTest(path=path):
                 self.assertEqual(len(self.scan(source, path)), 1)
 
@@ -31,12 +31,12 @@ class AssignedExpressionTests(unittest.TestCase):
         findings = self.scan(source)
         self.assertTrue(any(f['fingerprint'] == rc.fingerprint('actual-password-value') for f in findings))
 
-    def test_reference_and_fixture_strings_remain_blocking(self):
-        for value in ('secret://credential-name?extra', '${CONFIGURED_PASSWORD}', '<placeholder-password>', 'fixture-password'):
+    def test_reference_and_testbed_strings_remain_blocking(self):
+        for value in ('secret://credential-name?extra', '${CONFIGURED_PASSWORD}', '<placeholder-password>', 'testbed-password'):
             with self.subTest(value=value):
                 self.assertEqual(len(self.scan('password = "' + value + '"')), 1)
         scanner = rc.Scanner([])
-        scanner.file((b'url = "https://user:fixt' + (b'ure-' + (b'pass' + (b'word' + b'@example.invalid/path"')))), 'tree', 'test_config.py')
+        scanner.file((b'url = "https://user:fixt' + (b'ure-' + (b'pass' + (b'word' + b'@example.invalid/path"')))), 'tree', 'test_settings.py')
         self.assertTrue(any(f['kind'] == 'credential-url' and not f['reviewed'] for f in scanner.findings))
 
     def test_secret_valued_calls_with_positional_literals_still_block(self):

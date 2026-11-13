@@ -9,17 +9,17 @@ import test_release_check as fixtures
 
 class ManifestSchemaDetailTests(unittest.TestCase):
     def setUp(self):
-        self.fixture = fixtures.AuditTests()
-        self.fixture.setUp()
-        self.addCleanup(self.fixture.doCleanups)
+        self.testbed = fixtures.AuditTests()
+        self.testbed.setUp()
+        self.addCleanup(self.testbed.doCleanups)
 
     def manifest_file(self, obj):
-        path = self.fixture.root / "other-manifest.json"
+        path = self.testbed.root / "other-manifest.json"
         path.write_text(json.dumps(obj))
         return path
 
     def run_main(self, command, obj):
-        fx = self.fixture
+        fx = self.testbed
         args = [str(fx.repo), "--denylist", str(fx.denylist), "--manifest", str(self.manifest_file(obj))]
         if command:
             args = [command, *args]

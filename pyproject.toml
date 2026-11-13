@@ -16,4 +16,4 @@ dependencies = []
 coldrelease = "release_check:main"
 
 [tool.setuptools]
-py-modules = ["release_check", "release_workflow"]
+py-modules = ["release_check", "release_workflow", "release_templates"]

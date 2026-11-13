@@ -20,9 +20,9 @@ GRANT = 'You may redistribute this program under the terms of the GNU General Pu
 
 class ReworkTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tempdir.cleanup)
+        self.root = Path(self.tempdir.name)
         self.info = self.root / 'fake_dependency-1.dist-info'
         self.info.mkdir()
 
@@ -57,37 +57,37 @@ class ReworkTests(unittest.TestCase):
 
     def dependency_cli(self, evidence=None, *, export=False, root_license=None):
         """Install only our fake dist-info in the real verification venv."""
-        fixture = fixtures.AuditTests()
-        fixture.setUp()
-        self.addCleanup(fixture.doCleanups)
+        testbed = fixtures.AuditTests()
+        testbed.setUp()
+        self.addCleanup(testbed.doCleanups)
         if root_license is not None:
-            (fixture.repo / 'LICENSE').write_bytes(root_license.encode() if isinstance(root_license, str) else root_license)
+            (testbed.repo / 'LICENSE').write_bytes(root_license.encode() if isinstance(root_license, str) else root_license)
         source = 'fixtures/' + self.info.name
-        shutil.copytree(self.info, fixture.repo / source)
+        shutil.copytree(self.info, testbed.repo / source)
         install = ("import pathlib, shutil, sysconfig; "
                    "shutil.copytree(" + repr(source) + ", "
                    "pathlib.Path(sysconfig.get_path('purelib')) / " + repr(self.info.name) + ")")
         argv = ['python', '-c', install]
-        readme = fixture.repo / 'README.md'
+        readme = testbed.repo / 'README.md'
         lines = readme.read_text().splitlines()
         lines[3] = shlex.join(argv)
         readme.write_text('\n'.join(lines) + '\n')
-        manifest = {**fixture.manifest, 'quickstart': [{'file': 'README.md', 'line': 4, 'argv': argv}],
+        manifest = {**testbed.manifest, 'quickstart': [{'file': 'README.md', 'line': 4, 'argv': argv}],
                     'dependency_licenses': evidence or {}}
-        (fixture.repo / 'release-check.json').write_text(json.dumps(manifest))
-        before = {p.relative_to(fixture.repo): p.read_bytes() for p in fixture.repo.rglob('*')
-                  if p.is_file() and '.git' not in p.relative_to(fixture.repo).parts}
+        (testbed.repo / 'release-check.json').write_text(json.dumps(manifest))
+        before = {p.relative_to(testbed.repo): p.read_bytes() for p in testbed.repo.rglob('*')
+                  if p.is_file() and '.git' not in p.relative_to(testbed.repo).parts}
         process = subprocess.run(
-            [sys.executable, rc.__file__, str(fixture.repo), '--denylist', str(fixture.denylist),
-             '--reports', str(fixture.root / 'reports'), '--verify',
-             *(['--export', str(fixture.root / 'export')] if export else [])],
+            [sys.executable, rc.__file__, str(testbed.repo), '--denylist', str(testbed.denylist),
+             '--reports', str(testbed.root / 'reports'), '--verify',
+             *(['--export', str(testbed.root / 'export')] if export else [])],
             capture_output=True, text=True, timeout=60)
         code, out, err = process.returncode, process.stdout, process.stderr
-        after = {p.relative_to(fixture.repo): p.read_bytes() for p in fixture.repo.rglob('*')
-                 if p.is_file() and '.git' not in p.relative_to(fixture.repo).parts}
+        after = {p.relative_to(testbed.repo): p.read_bytes() for p in testbed.repo.rglob('*')
+                 if p.is_file() and '.git' not in p.relative_to(testbed.repo).parts}
         self.assertEqual(after, before, 'Audit wrote to its source repository')
         self.assertNotIn('Traceback', out + err)
-        report = json.loads(next((fixture.root / 'reports').rglob('report.json')).read_text())
+        report = json.loads(next((testbed.root / 'reports').rglob('report.json')).read_text())
         return code, report
 
     def test_v3_r2_cli_permissive_weak_and_unlabelled(self):
@@ -437,7 +437,7 @@ class ReworkTests(unittest.TestCase):
     def test_finding_7_paths_with_spaces_redacted(self):
         for path in (str(self.root / 'Example Person' / 'My Reports' / 'venv'),
                      'C:\\Example Person\\My Reports\\venv',
-                     '\\\\FixtureShare\\My Reports\\venv'):
+                     '\\\\TestbedShare\\My Reports\\venv'):
             for quote in ("'", '"', ''):
                 text = ('Error: Permission denied: ' + quote + path + quote + '\nRetry Debian/Ubuntu').encode()
                 hit = rc.venv_failure(text, rc.Scanner(['SyntheticPrivateTerm']))
@@ -446,18 +446,18 @@ class ReworkTests(unittest.TestCase):
                 self.assertIn('Retry Debian/Ubuntu', hit['error_tail'])
 
     def test_finding_7_embedded_quotes_and_report_serialization(self):
-        fixture = fixtures.AuditTests()
-        fixture.setUp()
-        self.addCleanup(fixture.doCleanups)
-        path = fixture.root / "Example Person's Folder" / 'My Reports' / 'venv'
+        testbed = fixtures.AuditTests()
+        testbed.setUp()
+        self.addCleanup(testbed.doCleanups)
+        path = testbed.root / "Example Person's Folder" / 'My Reports' / 'venv'
         output = ("Error: Permission denied: '" + str(path) + "'\nRetry Debian/Ubuntu HiddenPerson").encode()
         with patch.object(rc, 'command', return_value=(1, output)):
-            code, out, err = fixture.run_cli('--verify')
+            code, out, err = testbed.run_cli('--verify')
         self.assertEqual(code, 2)
         self.assertNotIn('Traceback', out + err)
-        for report_path in (fixture.root / 'reports').rglob('report.*'):
+        for report_path in (testbed.root / 'reports').rglob('report.*'):
             text = report_path.read_text()
-            for fragment in ('Example Person', 'My Reports', 'HiddenPerson', str(fixture.root)):
+            for fragment in ('Example Person', 'My Reports', 'HiddenPerson', str(testbed.root)):
                 self.assertNotIn(fragment, text)
             self.assertIn('Retry Debian/Ubuntu', text)
 
@@ -522,16 +522,16 @@ class ReworkTests(unittest.TestCase):
         self.assertIn('adjust file, line and argv', text)
 
     def test_judgement_13_verify_without_manifest_runs_no_commands(self):
-        fixture = fixtures.AuditTests()
-        fixture.setUp()
-        self.addCleanup(fixture.doCleanups)
-        (fixture.repo / 'release-check.json').unlink()
+        testbed = fixtures.AuditTests()
+        testbed.setUp()
+        self.addCleanup(testbed.doCleanups)
+        (testbed.repo / 'release-check.json').unlink()
         with patch.object(rc, 'command') as call:
-            code, out, err = fixture.run_cli('--verify')
+            code, out, err = testbed.run_cli('--verify')
         call.assert_not_called()
         self.assertEqual(code, 2)
         self.assertNotIn('Traceback', out + err)
-        report = json.loads(next((fixture.root / 'reports').rglob('report.json')).read_text())
+        report = json.loads(next((testbed.root / 'reports').rglob('report.json')).read_text())
         kinds = {f['kind'] for f in report['findings']}
         self.assertTrue({'quickstart-not-declared', 'test-command-not-declared', 'verification-not-configured'} <= kinds)
 
@@ -579,14 +579,14 @@ class ReworkTests(unittest.TestCase):
                     self.assertEqual(audit['verification']['dependencies']['blocked'], 1)
 
     def test_root_gate_preserves_non_mit_headings(self):
-        fixture = fixtures.AuditTests()
-        fixture.setUp()
-        self.addCleanup(fixture.doCleanups)
+        testbed = fixtures.AuditTests()
+        testbed.setUp()
+        self.addCleanup(testbed.doCleanups)
         for heading in ('LGPL-3.0-only', 'MPL-2.0', 'EPL-2.0', 'Apache-2.0', 'MIT-0'):
             with self.subTest(heading=heading):
-                (fixture.repo / 'LICENSE').write_text(heading + '\n' + MIT)
+                (testbed.repo / 'LICENSE').write_text(heading + '\n' + MIT)
                 scanner = rc.Scanner(['SyntheticPrivateTerm'])
-                result = rc.license_audit(fixture.repo, scanner, fixture.manifest)
+                result = rc.license_audit(testbed.repo, scanner, testbed.manifest)
                 self.assertEqual(result['status'], 'blocked')
                 self.assertTrue(any(f['kind'] == 'unrecognized-or-modified-license' for f in scanner.findings))
 
@@ -599,22 +599,22 @@ class ReworkTests(unittest.TestCase):
         self.assertTrue(any(f['kind'] == 'unrecognized-or-modified-license' for f in report['findings']))
 
     def test_root_gate_mit_headings_and_encoded_documents(self):
-        fixture = fixtures.AuditTests()
-        fixture.setUp()
-        self.addCleanup(fixture.doCleanups)
+        testbed = fixtures.AuditTests()
+        testbed.setUp()
+        self.addCleanup(testbed.doCleanups)
         for heading in ('MIT', 'MIT License', 'The MIT License (MIT)', 'MIT Software License'):
             for encoding in ('utf-8-sig', 'utf-16', 'utf-16-be', 'utf-32'):
                 with self.subTest(heading=heading, encoding=encoding):
-                    (fixture.repo / 'LICENSE').write_bytes((heading + '\n' + MIT).encode(encoding))
+                    (testbed.repo / 'LICENSE').write_bytes((heading + '\n' + MIT).encode(encoding))
                     scanner = rc.Scanner(['SyntheticPrivateTerm'])
-                    self.assertEqual(rc.license_audit(fixture.repo, scanner, fixture.manifest)['status'], 'pass')
-        (fixture.repo / 'LICENSE').write_text(MIT)
+                    self.assertEqual(rc.license_audit(testbed.repo, scanner, testbed.manifest)['status'], 'pass')
+        (testbed.repo / 'LICENSE').write_text(MIT)
         for declaration in ('{text = ' + json.dumps('LGPL-3.0-only\n' + MIT) + '}',
                             '{file = "other.txt"}'):
-            (fixture.repo / 'other.txt').write_bytes(('LGPL-3.0-only\n' + MIT).encode('utf-16-be'))
-            (fixture.repo / 'pyproject.toml').write_text('[project]\nlicense = ' + declaration + '\n')
+            (testbed.repo / 'other.txt').write_bytes(('LGPL-3.0-only\n' + MIT).encode('utf-16-be'))
+            (testbed.repo / 'pyproject.toml').write_text('[project]\nlicense = ' + declaration + '\n')
             scanner = rc.Scanner(['SyntheticPrivateTerm'])
-            rc.license_audit(fixture.repo, scanner, fixture.manifest)
+            rc.license_audit(testbed.repo, scanner, testbed.manifest)
             self.assertTrue(any(f['kind'] == 'license-metadata-mismatch' for f in scanner.findings))
 
     def test_final_gate_parser_failures_preserve_restrictions(self):
@@ -788,23 +788,23 @@ class ReworkTests(unittest.TestCase):
                     self.assertFalse(scanner.findings[0]['reviewed'])
 
     def test_final_gate_root_licences_and_metadata_do_not_drop_restrictions(self):
-        fixture = fixtures.AuditTests()
-        fixture.setUp()
-        self.addCleanup(fixture.doCleanups)
+        testbed = fixtures.AuditTests()
+        testbed.setUp()
+        self.addCleanup(testbed.doCleanups)
         for text in ('GPL-3.0-only\n' + MIT, 'Proprietary\n' + MIT):
-            (fixture.repo / 'LICENSE').write_text(text)
+            (testbed.repo / 'LICENSE').write_text(text)
             scanner = rc.Scanner(['SyntheticPrivateTerm'])
-            self.assertEqual(rc.license_audit(fixture.repo, scanner, fixture.manifest)['status'], 'blocked')
-        (fixture.repo / 'LICENSE').write_text(MIT)
-        (fixture.repo / 'COPYING').write_text(GPL)
+            self.assertEqual(rc.license_audit(testbed.repo, scanner, testbed.manifest)['status'], 'blocked')
+        (testbed.repo / 'LICENSE').write_text(MIT)
+        (testbed.repo / 'COPYING').write_text(GPL)
         scanner = rc.Scanner(['SyntheticPrivateTerm'])
-        self.assertEqual(rc.license_audit(fixture.repo, scanner, fixture.manifest)['status'], 'blocked')
-        (fixture.repo / 'COPYING').unlink()
+        self.assertEqual(rc.license_audit(testbed.repo, scanner, testbed.manifest)['status'], 'blocked')
+        (testbed.repo / 'COPYING').unlink()
         for declaration in ('{text = "GPL-3.0-only"}', '{file = "other.txt"}', '42'):
-            (fixture.repo / 'other.txt').write_text(GPL)
-            (fixture.repo / 'pyproject.toml').write_text('[project]\nname="fixture"\nlicense=' + declaration + '\n')
+            (testbed.repo / 'other.txt').write_text(GPL)
+            (testbed.repo / 'pyproject.toml').write_text('[project]\nname="testbed"\nlicense=' + declaration + '\n')
             scanner = rc.Scanner(['SyntheticPrivateTerm'])
-            rc.license_audit(fixture.repo, scanner, fixture.manifest)
+            rc.license_audit(testbed.repo, scanner, testbed.manifest)
             self.assertTrue(any(f['kind'] == 'license-metadata-mismatch' for f in scanner.findings))
 
 

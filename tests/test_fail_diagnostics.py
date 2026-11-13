@@ -86,7 +86,7 @@ class FailDiagnosticsTests(unittest.TestCase):
         (self.fx.repo / 'notes.txt').write_text('HiddenPerson')
         self.fx.commit('Add synthetic finding')
         # Include the newly tracked file in the already prepared export allowlist.
-        allowlist = self.fx.repo / '.coldrelease/runs/diagnostics/public-export.txt'
+        allowlist = workflow.run_directory(self.fx.repo, 'diagnostics') / 'public-export.txt'
         allowlist.write_text(allowlist.read_text() + 'notes.txt\n')
         for command in ('check', 'export'):
             with self.subTest(command=command):

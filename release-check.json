@@ -1,5 +1,26 @@
 {
-  "exclude": [],
+  "exclude": [
+    ".cursor/",
+    ".fleet/",
+    ".github/workflows/",
+    "STATE.md",
+    "briefs/",
+    "coldbox.toml",
+    "docs/audit/",
+    "docs/audit-opus-20261029.md",
+    "docs/benchmark_preflight.py",
+    "docs/coldcleaner-dry-run.md",
+    "docs/preflight-performance.md",
+    "docs/preflight-timings.json",
+    "docs/product-shape.md",
+    "docs/receipts/",
+    "docs/verification/",
+    "lessons/",
+    "tests/fixtures/coldlocker/",
+    "tests/test_guard_record_drift.py",
+    "tests/test_lesson_source.py",
+    "tests/test_public_ci.py"
+  ],
   "approvals": [
     {
       "scope": "tree",
@@ -15,21 +36,9 @@
     },
     {
       "scope": "tree",
-      "kind": "email",
-      "path": "release_check.py",
-      "fingerprint": "3de132cd98be7bf2"
-    },
-    {
-      "scope": "tree",
       "kind": "ipv6",
       "path": "release_check.py",
       "fingerprint": "71546855d6279ef7"
-    },
-    {
-      "scope": "tree",
-      "kind": "tailnet-ip",
-      "path": "release_check.py",
-      "fingerprint": "4b2228c26597aeca"
     },
     {
       "scope": "history",
@@ -45,27 +54,1037 @@
     },
     {
       "scope": "history",
-      "kind": "email",
-      "path": "release_check.py",
-      "fingerprint": "3de132cd98be7bf2"
-    },
-    {
-      "scope": "history",
       "kind": "ipv6",
       "path": "release_check.py",
       "fingerprint": "71546855d6279ef7"
     },
     {
-      "scope": "history",
-      "kind": "tailnet-ip",
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "CHANGELOG.md",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "CHANGELOG.md",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "LICENSE",
+      "fingerprint": "f6bdce396e4f3da2",
+      "reason": "Public copyright holder named in the MIT licence."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "README.md",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "README.md",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "README.md",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "docs/coldrelease-workflow.md",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "docs/coldrelease-workflow.md",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "docs/coldrelease-workflow.md",
+      "fingerprint": "a76ce82a974999d8",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "docs/coldrelease-workflow.md",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "docs/npm-source-review.md",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
       "path": "release_check.py",
-      "fingerprint": "4b2228c26597aeca"
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "release_check.py",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "release_check.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "release_check.py",
+      "fingerprint": "b7bdb84f49cf8953",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "release_check.py",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "ipv6",
+      "path": "release_check.py",
+      "fingerprint": "dedbb0fe199582c4",
+      "reason": "Git log format placeholders in the engine source that look like an IPv6 address."
+    },
+    {
+      "scope": "tree",
+      "kind": "ipv6",
+      "path": "release_check.py",
+      "fingerprint": "a7e2023a4d4bdd47",
+      "reason": "Git log format placeholders in the engine source that look like an IPv6 address."
+    },
+    {
+      "scope": "tree",
+      "kind": "home-path",
+      "path": "release_check.py",
+      "fingerprint": "1d3d11934ce665bc",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "tree",
+      "kind": "home-path",
+      "path": "release_check.py",
+      "fingerprint": "1611bf3666c5e9b1",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "tree",
+      "kind": "home-path",
+      "path": "release_check.py",
+      "fingerprint": "e24eb118bb6d84a4",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "release_workflow.py",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "release_workflow.py",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "release_workflow.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "release_workflow.py",
+      "fingerprint": "b7bdb84f49cf8953",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "release_workflow.py",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "[path-100285809c48e187]",
+      "fingerprint": "2a59d59e3809f827",
+      "reason": "Ordinary English word in the unchanged LGPL-2.1 licence text used as a test input."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_bun_licenses.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_coldrelease_names.py",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "tests/test_confirm_public.py",
+      "fingerprint": "3de132cd98be7bf2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "tests/test_confirm_public.py",
+      "fingerprint": "3b3d7325bd64ad8a",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "tests/test_confirm_public.py",
+      "fingerprint": "8f6bd089b54623d6",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "[path-77fa68f1f7212f4b]",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "[path-77fa68f1f7212f4b]",
+      "fingerprint": "87e89abb4c1c551f",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "0e3f91b47c7985be",
+      "reason": "Invented username that the identity-terms test needs to prove history usernames become terms."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "6e85370173d049e1",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "01711f9b6e5ba4fd",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "home-path",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "fa54efcd553bb0ed",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "tree",
+      "kind": "home-path",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "ab622afc240b03c7",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "tree",
+      "kind": "home-path",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "b1cbc5f347543a03",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "tree",
+      "kind": "home-path",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "b98d692c4574a80e",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_invalid_arguments.py",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "home-path",
+      "path": "tests/test_metadata_scan.py",
+      "fingerprint": "33f00fea9c1d45f0",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_node_ecosystem.py",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_node_ecosystem.py",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_node_ecosystem.py",
+      "fingerprint": "b7bdb84f49cf8953",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_node_ecosystem.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_node_ecosystem.py",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "tests/test_owner_public_push.py",
+      "fingerprint": "3de132cd98be7bf2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "tests/test_owner_public_push.py",
+      "fingerprint": "caca56e22aa880c2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "[path-4764d75679981fd3]",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "[path-4764d75679981fd3]",
+      "fingerprint": "a76ce82a974999d8",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "[path-4764d75679981fd3]",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_private_http_target.py",
+      "fingerprint": "b7bdb84f49cf8953",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_private_http_target.py",
+      "fingerprint": "87e89abb4c1c551f",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_private_http_target.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_private_terms.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_published_target.py",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_published_target.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_recipe_proposal.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_release_check.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_release_check.py",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_release_workflow.py",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_release_workflow.py",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_release_workflow.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "tests/test_release_workflow.py",
+      "fingerprint": "3de132cd98be7bf2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "tests/test_remote_source.py",
+      "fingerprint": "3de132cd98be7bf2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "tests/test_remote_source.py",
+      "fingerprint": "4c2b4811b6db2d51",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_sanitize.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_strict_receipt.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_verify_backend.py",
+      "fingerprint": "b7bdb84f49cf8953",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "CHANGELOG.md",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "CHANGELOG.md",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "LICENSE",
+      "fingerprint": "f6bdce396e4f3da2",
+      "reason": "Public copyright holder named in the MIT licence."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "README.md",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "README.md",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "README.md",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "docs/coldrelease-workflow.md",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "docs/coldrelease-workflow.md",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "docs/coldrelease-workflow.md",
+      "fingerprint": "a76ce82a974999d8",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "docs/coldrelease-workflow.md",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "docs/npm-source-review.md",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "release_check.py",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "release_check.py",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "release_check.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "release_check.py",
+      "fingerprint": "b7bdb84f49cf8953",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "release_check.py",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "ipv6",
+      "path": "release_check.py",
+      "fingerprint": "dedbb0fe199582c4",
+      "reason": "Git log format placeholders in the engine source that look like an IPv6 address."
+    },
+    {
+      "scope": "history",
+      "kind": "ipv6",
+      "path": "release_check.py",
+      "fingerprint": "a7e2023a4d4bdd47",
+      "reason": "Git log format placeholders in the engine source that look like an IPv6 address."
+    },
+    {
+      "scope": "history",
+      "kind": "home-path",
+      "path": "release_check.py",
+      "fingerprint": "1d3d11934ce665bc",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "history",
+      "kind": "home-path",
+      "path": "release_check.py",
+      "fingerprint": "1611bf3666c5e9b1",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "history",
+      "kind": "home-path",
+      "path": "release_check.py",
+      "fingerprint": "e24eb118bb6d84a4",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "release_workflow.py",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "release_workflow.py",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "release_workflow.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "release_workflow.py",
+      "fingerprint": "b7bdb84f49cf8953",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "release_workflow.py",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "[path-100285809c48e187]",
+      "fingerprint": "2a59d59e3809f827",
+      "reason": "Ordinary English word in the unchanged LGPL-2.1 licence text used as a test input."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_bun_licenses.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_coldrelease_names.py",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "tests/test_confirm_public.py",
+      "fingerprint": "3de132cd98be7bf2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "tests/test_confirm_public.py",
+      "fingerprint": "3b3d7325bd64ad8a",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "tests/test_confirm_public.py",
+      "fingerprint": "8f6bd089b54623d6",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "[path-77fa68f1f7212f4b]",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "[path-77fa68f1f7212f4b]",
+      "fingerprint": "87e89abb4c1c551f",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "0e3f91b47c7985be",
+      "reason": "Invented username that the identity-terms test needs to prove history usernames become terms."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "6e85370173d049e1",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "01711f9b6e5ba4fd",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "home-path",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "fa54efcd553bb0ed",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "history",
+      "kind": "home-path",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "ab622afc240b03c7",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "history",
+      "kind": "home-path",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "b1cbc5f347543a03",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "history",
+      "kind": "home-path",
+      "path": "tests/test_identity_terms.py",
+      "fingerprint": "b98d692c4574a80e",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_invalid_arguments.py",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "home-path",
+      "path": "tests/test_metadata_scan.py",
+      "fingerprint": "33f00fea9c1d45f0",
+      "reason": "Synthetic or generic home path used as test input, or the engine's own VM scratch path, not a real user's home."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_node_ecosystem.py",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_node_ecosystem.py",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_node_ecosystem.py",
+      "fingerprint": "b7bdb84f49cf8953",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_node_ecosystem.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_node_ecosystem.py",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "tests/test_owner_public_push.py",
+      "fingerprint": "3de132cd98be7bf2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "tests/test_owner_public_push.py",
+      "fingerprint": "caca56e22aa880c2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "[path-4764d75679981fd3]",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "[path-4764d75679981fd3]",
+      "fingerprint": "a76ce82a974999d8",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "[path-4764d75679981fd3]",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_private_http_target.py",
+      "fingerprint": "b7bdb84f49cf8953",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_private_http_target.py",
+      "fingerprint": "87e89abb4c1c551f",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_private_http_target.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_private_terms.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_published_target.py",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_published_target.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_recipe_proposal.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_release_check.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_release_check.py",
+      "fingerprint": "cf10d3eb4b80f1fd",
+      "reason": "Ordinary temporary-directory name. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_release_workflow.py",
+      "fingerprint": "5e1ecee06a7fc06f",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_release_workflow.py",
+      "fingerprint": "c118f9f5f19eb5ee",
+      "reason": "Ordinary word for stored copies of data. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_release_workflow.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "tests/test_release_workflow.py",
+      "fingerprint": "3de132cd98be7bf2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "tests/test_remote_source.py",
+      "fingerprint": "3de132cd98be7bf2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "tests/test_remote_source.py",
+      "fingerprint": "4c2b4811b6db2d51",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_sanitize.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_strict_receipt.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_verify_backend.py",
+      "fingerprint": "b7bdb84f49cf8953",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "tree",
+      "kind": "email",
+      "path": "docs/coldrelease-workflow.md",
+      "fingerprint": "3de132cd98be7bf2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "tree",
+      "kind": "denylist",
+      "path": "tests/test_readme_quickstart.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
+    },
+    {
+      "scope": "history",
+      "kind": "email",
+      "path": "docs/coldrelease-workflow.md",
+      "fingerprint": "3de132cd98be7bf2",
+      "reason": "Synthetic test address on a reserved example domain or the public git@ SSH user of a forge URL."
+    },
+    {
+      "scope": "history",
+      "kind": "denylist",
+      "path": "tests/test_readme_quickstart.py",
+      "fingerprint": "b79606fb3afea5bd",
+      "reason": "Ordinary word for settings. History made it a term only through the engine's own VM scratch path, not a person."
     }
   ],
   "quickstart": [
     {
       "file": "README.md",
-      "line": 19,
+      "line": 48,
       "argv": [
         "python",
         "-m",
@@ -76,7 +1095,15 @@
     },
     {
       "file": "README.md",
-      "line": 20,
+      "line": 49,
+      "argv": [
+        "coldrelease",
+        "--version"
+      ]
+    },
+    {
+      "file": "README.md",
+      "line": 50,
       "argv": [
         "coldrelease",
         "--help"
@@ -84,7 +1111,7 @@
     },
     {
       "file": "README.md",
-      "line": 26,
+      "line": 112,
       "argv": [
         "coldrelease",
         "--requirements"
@@ -106,7 +1133,8 @@
         "-k",
         "_cli_",
         "-v"
-      ]
+      ],
+      "timeout": 3600
     },
     {
       "role": "tests",
@@ -118,7 +1146,8 @@
         "-s",
         "tests",
         "-q"
-      ]
+      ],
+      "timeout": 3600
     },
     {
       "role": "syntax",

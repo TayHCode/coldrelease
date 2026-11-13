@@ -17,7 +17,7 @@ class BunLicenseTests(unittest.TestCase):
         self.repo = Path(self.temp.name)
         subprocess.run(['git', 'init', '-q', str(self.repo)], check=True)
         shutil.copyfile(Path(rc.__file__).with_name('LICENSE'), self.repo / 'LICENSE')
-        self.package = {'name': 'fixture', 'dependencies': {'example': '^1.0.0'}}
+        self.package = {'name': 'testbed', 'dependencies': {'example': '^1.0.0'}}
         self.integrity = 'sha512-' + 'A' * 86 + '=='
         self.lock = {'lockfileVersion': 1, 'configVersion': 1,
                      'workspaces': {'': copy.deepcopy(self.package)},
@@ -41,7 +41,7 @@ class BunLicenseTests(unittest.TestCase):
         (self.repo / 'bun.lock').write_text(json.dumps(self.lock))
 
     def audit(self, approvals=()):
-        scanner = rc.Scanner(['PrivateFixture'], approvals=approvals)
+        scanner = rc.Scanner(['PrivateTestbed'], approvals=approvals)
         result = rc.license_audit(self.repo, scanner, self.manifest)
         return result, scanner.findings
 
@@ -70,14 +70,14 @@ class BunLicenseTests(unittest.TestCase):
         self.assertEqual(self.audit()[0]['dependencies'], 'not-verified')
         approval = self.approval()
         self.assertEqual(self.audit([approval])[0]['dependencies'], 'pass')
-        for reason in ('', ' ', None, 7, 'PrivateFixture'):
+        for reason in ('', ' ', None, 7, 'PrivateTestbed'):
             self.assertFalse(self.audit([{**approval, 'reason': reason}])[1][0]['reviewed'])
 
     def test_jsonc_and_supported_versions_preserve_strings_and_duplicates(self):
         self.lock['packages']['example'][2]['bin'] = {'tool': 'https://example.invalid/a, } /* literal */'}
         for version in (1, 2):
-            for config in (0, 1):
-                self.lock.update(lockfileVersion=version, configVersion=config)
+            for version_flag in (0, 1):
+                self.lock.update(lockfileVersion=version, configVersion=version_flag)
                 raw = json.dumps(self.lock)
                 (self.repo / 'bun.lock').write_text('// comment\n' + raw[:-1] + ', /* comment */ }')
                 self.approval()
@@ -227,11 +227,11 @@ class BunLicenseTests(unittest.TestCase):
         self.assertEqual([f['kind'] for f in self.audit()[1]], ['dependency-ecosystem-manual-review'])
 
     def test_private_metadata_remains_fingerprinted_in_reports(self):
-        self.lock['packages']['example'][2]['bin'] = {'tool': 'PrivateFixture'}
+        self.lock['packages']['example'][2]['bin'] = {'tool': 'PrivateTestbed'}
         self.write()
         result, findings = self.audit()
         self.assertEqual(findings[0]['kind'], 'bun-source-declarations-review')
-        self.assertNotIn('PrivateFixture', json.dumps([result, findings]))
+        self.assertNotIn('PrivateTestbed', json.dumps([result, findings]))
 
     def test_other_locks_or_installed_payload_cannot_use_source_approval(self):
         approval = self.approval()
@@ -255,7 +255,7 @@ class BunLicenseTests(unittest.TestCase):
             self.document(name, version)
         packages['node_modules/busboy']['dependencies'] = {'streamsearch': '^1.1.0'}
         (self.repo / 'package.json').write_text(json.dumps(self.package))
-        (self.repo / 'package-lock.json').write_text(json.dumps({'lockfileVersion': 3, 'name': 'fixture', 'packages': packages}))
+        (self.repo / 'package-lock.json').write_text(json.dumps({'lockfileVersion': 3, 'name': 'testbed', 'packages': packages}))
         result, findings = self.audit()
         self.assertEqual(result['npm_source_reviews'][0]['license_states'], {'accepted': 2})
         self.assertEqual(findings[0]['kind'], 'npm-source-declarations-review')
@@ -265,7 +265,7 @@ class BunLicenseTests(unittest.TestCase):
         text = (self.repo / 'bun.lock').read_bytes()
         (self.repo / 'bun.lock').unlink()
         binary = self.repo / 'bun.lockb'
-        binary.write_bytes(b'fixture binary\0lock')
+        binary.write_bytes(b'testbed binary\0lock')
         real_run = subprocess.run
 
         def convert(argv, **kwargs):
@@ -302,7 +302,7 @@ class BunLicenseTests(unittest.TestCase):
                     raise error
                 return subprocess.CompletedProcess(argv, result)
             return run
-        for error in (OSError('PrivateFixture'), subprocess.TimeoutExpired('bun', 30)):
+        for error in (OSError('PrivateTestbed'), subprocess.TimeoutExpired('bun', 30)):
             with patch.object(rc.shutil, 'which', return_value='/usr/bin/bun'), patch.object(rc.subprocess, 'run', side_effect=converter(error=error)):
                 self.incomplete()
         for code in (0, 1):

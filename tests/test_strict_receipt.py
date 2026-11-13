@@ -35,9 +35,9 @@ class StrictReceiptTests(unittest.TestCase):
         cls.receipt_bytes = cls.receipt_path.read_bytes()
 
     def setUp(self):
-        self.fixture = fixtures.AuditTests()
-        self.fixture.setUp()
-        self.addCleanup(self.fixture.doCleanups)
+        self.testbed = fixtures.AuditTests()
+        self.testbed.setUp()
+        self.addCleanup(self.testbed.doCleanups)
 
     def validate(self, extra=(), path=None):
         return cli(["--validate-receipt", str(path or self.receipt_path), str(self.export),
@@ -55,7 +55,7 @@ class StrictReceiptTests(unittest.TestCase):
         return summary
 
     def report(self):
-        return json.loads(sorted((self.fixture.root / "reports").rglob("report.json"))[-1].read_text())
+        return json.loads(sorted((self.testbed.root / "reports").rglob("report.json"))[-1].read_text())
 
     def test_clean_export_and_read_only_validation(self):
         summary = self.result(self.clean_result, "PASS")
@@ -75,7 +75,7 @@ class StrictReceiptTests(unittest.TestCase):
         self.assertNotIn("HiddenPerson", self.receipt_bytes.decode())
         inventory = rc.inventory_digest(self.export)
         audit = rc.audit(self.export, self.clean.terms, self.clean.manifest, [],
-                         True, self.fixture.root, 300)
+                         True, self.testbed.root, 300)
         self.assertEqual(audit["outcome"], "PASS")
         self.assertEqual(rc.inventory_digest(self.export), inventory)
         reports = self.clean.root / "must-not-exist"
@@ -88,11 +88,11 @@ class StrictReceiptTests(unittest.TestCase):
     def test_leaks_fail_and_never_escape(self):
         for marker, reason in (("ghp_" + "Ab12" * 9, "github-token"), ("HiddenPerson", "denylist")):
             with self.subTest(reason=reason):
-                (self.fixture.repo / "leak.txt").write_text(marker)
-                self.fixture.commit("Synthetic fixture")
-                target = self.fixture.root / reason
+                (self.testbed.repo / "leak.txt").write_text(marker)
+                self.testbed.commit("Synthetic testbed")
+                target = self.testbed.root / reason
                 with patch.object(rc, "verify", side_effect=verified):
-                    run = self.fixture.run_cli("--verify", "--export", str(target))
+                    run = self.testbed.run_cli("--verify", "--export", str(target))
                 self.result(run, "FAIL")
                 report = self.report()
                 self.assertEqual(report["outcome"], "FAIL")
@@ -100,32 +100,32 @@ class StrictReceiptTests(unittest.TestCase):
                 self.assertEqual(report["export"]["outcome"], "FAIL")
                 self.assertIn(reason, report["export"]["reasons"])
                 self.assertFalse(report["ready"])
-                for path in (self.fixture.root / "reports").rglob("*"):
+                for path in (self.testbed.root / "reports").rglob("*"):
                     if path.is_file():
                         self.assertNotIn(marker, path.read_text())
                 self.assertNotIn(marker, run[1] + run[2])
-                receipt = sorted((self.fixture.root / "reports").rglob("receipt.json"))[-1]
-                args = ["--validate-receipt", str(receipt), str(target), "--denylist", str(self.fixture.denylist), "--verify"]
+                receipt = sorted((self.testbed.root / "reports").rglob("receipt.json"))[-1]
+                args = ["--validate-receipt", str(receipt), str(target), "--denylist", str(self.testbed.denylist), "--verify"]
                 self.result(cli(args), "FAIL", reason, [])
 
     def test_coverage_gaps_are_incomplete(self):
-        self.result(self.fixture.run_cli(), "INCOMPLETE")
+        self.result(self.testbed.run_cli(), "INCOMPLETE")
         report = self.report()
         self.assertEqual(report["reasons"], ["verification-not-passed", "verification-not-run"])
         self.assertFalse(report["ready"])
         self.assertEqual({f["kind"] for f in report["findings"]}, {"verification-not-run"})
-        (self.fixture.repo / "link").symlink_to("README.md")
+        (self.testbed.repo / "link").symlink_to("README.md")
         with patch.object(rc, "verify", side_effect=verified):
-            run = self.fixture.run_cli("--verify", "--export", str(self.fixture.root / "export"))
+            run = self.testbed.run_cli("--verify", "--export", str(self.testbed.root / "export"))
         self.result(run, "INCOMPLETE")
         export = self.report()["export"]
         self.assertEqual(export["outcome"], "INCOMPLETE")
         self.assertEqual(export["reasons"], ["unsupported-file"])
         self.assertFalse(export["ready"])
         self.assertTrue(all(f["category"] == "coverage" for f in export["findings"]))
-        receipt = next((self.fixture.root / "reports").rglob("receipt.json"))
-        self.result(cli(["--validate-receipt", str(receipt), str(self.fixture.root / "export"),
-                         "--denylist", str(self.fixture.denylist), "--verify"]),
+        receipt = next((self.testbed.root / "reports").rglob("receipt.json"))
+        self.result(cli(["--validate-receipt", str(receipt), str(self.testbed.root / "export"),
+                         "--denylist", str(self.testbed.denylist), "--verify"]),
                     "INCOMPLETE", "unsupported-file", [])
 
     def test_unknown_license_and_empty_accounting_cannot_pass(self):
@@ -133,7 +133,7 @@ class StrictReceiptTests(unittest.TestCase):
                                 (patch.object(rc.Scanner, "history"), "empty-history"),
                                 (patch.object(rc.Scanner, "tree"), "empty-tree")):
             with self.subTest(reason=reason), patcher, patch.object(rc, "verify", side_effect=verified):
-                self.result(self.fixture.run_cli("--verify"), "INCOMPLETE")
+                self.result(self.testbed.run_cli("--verify"), "INCOMPLETE")
                 report = self.report()
                 self.assertEqual(report["outcome"], "INCOMPLETE")
                 self.assertIn(reason, report["reasons"])
@@ -141,35 +141,35 @@ class StrictReceiptTests(unittest.TestCase):
                 self.assertEqual(report["findings"], [])
 
     def test_readme_command_contradicting_manifest_fails(self):
-        self.fixture.manifest["quickstart"][0]["argv"] = ["python", "-c", "print(2)"]
-        (self.fixture.repo / "release-check.json").write_text(json.dumps(self.fixture.manifest))
-        self.fixture.commit("Contradict README")
-        code, out, err = self.fixture.run_cli("--verify")
+        self.testbed.manifest["quickstart"][0]["argv"] = ["python", "-c", "print(2)"]
+        (self.testbed.repo / "release-check.json").write_text(json.dumps(self.testbed.manifest))
+        self.testbed.commit("Contradict README")
+        code, out, err = self.testbed.run_cli("--verify")
         self.assertEqual(code, 1, out + err)
         self.assertEqual(json.loads(out)["outcome"], "FAIL")
         self.assertIn("quickstart-document-mismatch", self.report()["reasons"])
 
     def test_unsupported_dependency_coverage_is_incomplete(self):
-        (self.fixture.repo / "Cargo.toml").write_text("")
+        (self.testbed.repo / "Cargo.toml").write_text("")
         with patch.object(rc, "verify", side_effect=verified):
-            self.result(self.fixture.run_cli("--verify"), "INCOMPLETE")
+            self.result(self.testbed.run_cli("--verify"), "INCOMPLETE")
         self.assertEqual(self.report()["reasons"], ["dependency-ecosystem-manual-review"])
 
     def test_fail_dominates_and_retains_incomplete_reasons(self):
-        (self.fixture.repo / "leak.txt").write_text("HiddenPerson")
-        self.result(self.fixture.run_cli(), "FAIL")
+        (self.testbed.repo / "leak.txt").write_text("HiddenPerson")
+        self.result(self.testbed.run_cli(), "FAIL")
         report = self.report()
         self.assertEqual(report["reasons"], ["denylist", "verification-not-passed", "verification-not-run"])
         self.assertFalse(report["ready"])
 
     def test_verification_cannot_certify_a_mutated_candidate(self):
-        target = self.fixture.root / "export"
+        target = self.testbed.root / "export"
         payload = (f"from pathlib import Path; target = Path(bytes.fromhex('{bytes(target).hex()}').decode()); "
                    "(target / 'late.txt').write_text('Hidden' + 'Person')")
-        self.fixture.manifest["checks"].append({"role": "tests", "argv": ["python", "-c", payload]})
-        (self.fixture.repo / "release-check.json").write_text(json.dumps(self.fixture.manifest))
-        self.fixture.commit("Add candidate mutation check")
-        code, out, err = self.fixture.run_cli("--verify", "--export", str(target))
+        self.testbed.manifest["checks"].append({"role": "tests", "argv": ["python", "-c", payload]})
+        (self.testbed.repo / "release-check.json").write_text(json.dumps(self.testbed.manifest))
+        self.testbed.commit("Add candidate mutation check")
+        code, out, err = self.testbed.run_cli("--verify", "--export", str(target))
         self.assertEqual(code, 1, out + err)
         self.assertEqual((target / "late.txt").read_text(), "HiddenPerson")
         summary = json.loads(out)
@@ -179,16 +179,31 @@ class StrictReceiptTests(unittest.TestCase):
         self.assertEqual(report["outcome"], "FAIL")
         self.assertEqual(report["reasons"], ["candidate-mutated"])
         self.assertFalse(report["ready"])
-        receipt = next((self.fixture.root / "reports").rglob("receipt.json"))
+        receipt = next((self.testbed.root / "reports").rglob("receipt.json"))
         self.result(cli(["--validate-receipt", str(receipt), str(target),
-                         "--denylist", str(self.fixture.denylist), "--verify"]),
+                         "--denylist", str(self.testbed.denylist), "--verify"]),
                     "FAIL", "candidate-mutated", [])
+
+    def test_receipt_binds_the_audited_inventory_not_a_later_one(self):
+        target = self.testbed.root / "export"
+        original = rc.write_reports
+
+        def write_reports_then_mutate(*args, **kwargs):
+            original(*args, **kwargs)
+            (target / "late.txt").write_text("unscanned")
+
+        with patch.object(rc, "write_reports", side_effect=write_reports_then_mutate):
+            self.result(self.testbed.run_cli("--verify", "--export", str(target)), "PASS")
+        receipt = next((self.testbed.root / "reports").rglob("receipt.json"))
+        self.result(cli(["--validate-receipt", str(receipt), str(target),
+                         "--denylist", str(self.testbed.denylist), "--verify"]),
+                    "INCOMPLETE", "receipt-stale", ["inventory"])
 
     def test_git_metadata_mutations_invalidate_inventory(self):
         config = self.export / ".git/config"
         original = config.read_bytes()
         hook = self.export / ".git/hooks/receipt-test"
-        blob = b"Unreferenced receipt fixture\n"
+        blob = b"Unreferenced receipt testbed\n"
         oid = subprocess.run(["git", "hash-object", "--stdin"], input=blob,
                              capture_output=True, check=True).stdout.decode().strip()
         object_path = self.export / ".git/objects" / oid[:2] / oid[2:]
@@ -208,7 +223,7 @@ class StrictReceiptTests(unittest.TestCase):
                 object_path.parent.rmdir()
 
         mutations = [
-            ("config", lambda: config.write_bytes(original + b"\n# receipt fixture\n"),
+            ("config", lambda: config.write_bytes(original + b"\n# receipt testbed\n"),
              lambda: config.write_bytes(original)),
             ("hook", add_hook, hook.unlink),
             ("unreferenced-object", add_blob, remove_blob),
@@ -244,17 +259,17 @@ class StrictReceiptTests(unittest.TestCase):
                 self.result(self.validate(), "PASS", mismatched=[])
 
     def test_media_review_is_incomplete_but_leaks_still_fail(self):
-        (self.fixture.repo / "photo.png").write_bytes(b"image fixture")
+        (self.testbed.repo / "photo.png").write_bytes(b"image testbed")
         with patch.object(rc, "verify", side_effect=verified):
-            self.result(self.fixture.run_cli("--verify"), "INCOMPLETE")
+            self.result(self.testbed.run_cli("--verify"), "INCOMPLETE")
             self.assertEqual(self.report()["reasons"], ["manual-review"])
             self.assertFalse(self.report()["ready"])
-            (self.fixture.repo / "leak.txt").write_text("HiddenPerson")
-            self.result(self.fixture.run_cli("--verify"), "FAIL")
+            (self.testbed.repo / "leak.txt").write_text("HiddenPerson")
+            self.result(self.testbed.run_cli("--verify"), "FAIL")
             self.assertEqual(self.report()["reasons"], ["denylist", "manual-review"])
 
     def test_oversized_receipts_are_invalid_without_traceback(self):
-        path = self.fixture.root / "oversized.json"
+        path = self.testbed.root / "oversized.json"
         with path.open("wb") as handle:
             handle.truncate(2 * 1024 * 1024)
         with patch.object(rc.json, "loads", wraps=rc.json.loads) as loads:
@@ -310,7 +325,7 @@ class StrictReceiptTests(unittest.TestCase):
             self.result(self.validate(), "INCOMPLETE", "receipt-stale", ["inventory", "recipe"])
         finally:
             manifest.write_bytes(original)
-        external = self.fixture.root / "manifest.json"
+        external = self.testbed.root / "manifest.json"
         external.write_text(json.dumps(obj))
         self.result(self.validate(["--manifest", str(external)]), "INCOMPLETE", "receipt-stale", ["recipe"])
         denylist = self.clean.denylist.read_bytes()
@@ -335,7 +350,7 @@ class StrictReceiptTests(unittest.TestCase):
         unknown["receipt_sha256"] = rc.sha256(rc.canonical_json({k: v for k, v in unknown.items() if k != "receipt_sha256"}))
         variants = [b"[]", b"{", b'{"schema_version":1,"schema_version":1}',
                     rc.canonical_json({**receipt, "outcome": "FAIL"}), rc.canonical_json(unknown)]
-        path = self.fixture.root / "invalid.json"
+        path = self.testbed.root / "invalid.json"
         for raw in variants:
             with self.subTest(raw=raw[:35]):
                 path.write_bytes(raw)
@@ -343,15 +358,15 @@ class StrictReceiptTests(unittest.TestCase):
                 self.assertEqual(result["reasons"], ["receipt-invalid"])
 
     def test_reports_cannot_be_inside_export(self):
-        target = self.fixture.root / "export"
-        run = self.fixture.run_cli("--export", str(target), "--reports", str(target / "reports"))
+        target = self.testbed.root / "export"
+        run = self.testbed.run_cli("--export", str(target), "--reports", str(target / "reports"))
         self.assertEqual(run[0], 2)
         self.assertEqual(json.loads(run[2])["outcome"], "INCOMPLETE")
         self.assertFalse(target.exists())
 
     def test_fallback_report_is_incomplete(self):
         with patch.object(rc, "audit", side_effect=rc.AuditError("synthetic")):
-            run = self.fixture.run_cli()
+            run = self.testbed.run_cli()
         self.assertEqual(run[0], 2)
         report = self.report()
         self.assertEqual(report["outcome"], "INCOMPLETE")
@@ -359,11 +374,11 @@ class StrictReceiptTests(unittest.TestCase):
         self.assertFalse(report["ready"])
 
     def test_leak_assertion_detects_ignored_findings(self):
-        (self.fixture.repo / "leak.txt").write_text("ghp_" + "Ab12" * 9)
+        (self.testbed.repo / "leak.txt").write_text("ghp_" + "Ab12" * 9)
         real_outcome = rc.outcome
         with patch.object(rc, "verify", side_effect=verified), patch.object(
                 rc, "outcome", side_effect=lambda report: real_outcome({**report, "findings": []})):
-            run = self.fixture.run_cli("--verify")
+            run = self.testbed.run_cli("--verify")
         with self.assertRaises(AssertionError):
             self.result(run, "FAIL")
         self.result(run, "PASS")

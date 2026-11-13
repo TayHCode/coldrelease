@@ -4,7 +4,7 @@ import release_check as rc
 
 
 class ResidualFormatTests(unittest.TestCase):
-    def scan(self, source, path='config.py', terms=(), scope='tree'):
+    def scan(self, source, path='settings.py', terms=(), scope='tree'):
         scanner = rc.Scanner(list(terms))
         scanner.file(source.encode(), scope, path)
         return scanner.findings
@@ -35,7 +35,7 @@ class ResidualFormatTests(unittest.TestCase):
 
     def test_pattern_classification_requires_initial_module_declaration(self):
         sources = (
-            'import re\nimport review_fixture_patch\npassword = re.compile("token|password")',
+            'import re\nimport review_testbed_patch\npassword = re.compile("token|password")',
             ('import re\nclass Holder(Exception):\n def compile(self, pattern): return "actual-password-value"\ntry:\n raise Holder()\nexcept Holder as re:\n password = re.c' + 'ompile("token|password")'),
             ('import re\nclass Holder:\n def compile(self, pattern): return "actual-password-value"\nmatch Holder():\n case re:\n  password = re.c' + 'ompile("token|password")'),
             'import re\nsetattr(re, "compile", identity)\npassword = re.compile("token|password")',
@@ -70,10 +70,10 @@ class ResidualFormatTests(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertTrue(self.secrets('password = "' + value + '"'))
         for source, path in (
-            (('password = "secr' + 'et://existing"'), 'config.txt'),
-            (('password = "secr' + 'et://existing"\nif'), 'config.py'),
-            ('password = "sec' + 'ret:\\x2f/existing"', 'config.py'),
-            (('password = "secr' + 'et://existing" "suffix"'), 'config.py'),
+            (('password = "secr' + 'et://existing"'), 'settings.txt'),
+            (('password = "secr' + 'et://existing"\nif'), 'settings.py'),
+            ('password = "sec' + 'ret:\\x2f/existing"', 'settings.py'),
+            (('password = "secr' + 'et://existing" "suffix"'), 'settings.py'),
         ):
             self.assertTrue(self.secrets(source, path=path))
 
@@ -84,7 +84,7 @@ class ResidualFormatTests(unittest.TestCase):
             for value in ('secret://' + token, '${AGENTLOCKER_SECRET_' + token + '}'):
                 with self.subTest(value=value):
                     self.assertTrue(self.secrets('password = "' + value + '"'))
-        findings = self.scan(('password = "secr' + 'et://HiddenFixture"'), terms=['HiddenFixture'])
+        findings = self.scan(('password = "secr' + 'et://HiddenTestbed"'), terms=['HiddenTestbed'])
         self.assertTrue(any(f['kind'] == 'denylist' and not f['reviewed'] for f in findings))
 
     def test_ts_lookalikes_and_invalid_source_remain_blocking(self):

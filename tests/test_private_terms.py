@@ -112,31 +112,31 @@ class BoundaryTests(unittest.TestCase):
 
 class PrivacyIntegrationTests(unittest.TestCase):
     def setUp(self):
-        # Reuse the existing fully synthetic, valid repository fixture.
-        self.fixture = fixtures.AuditTests()
-        self.fixture.setUp()
-        self.addCleanup(self.fixture.doCleanups)
-        self.fixture.denylist.write_text(json.dumps(["larch"]))
+        # Reuse the existing fully synthetic, valid repository testbed.
+        self.testbed = fixtures.AuditTests()
+        self.testbed.setUp()
+        self.addCleanup(self.testbed.doCleanups)
+        self.testbed.denylist.write_text(json.dumps(["larch"]))
 
     def cli(self, *args):
-        fixture = self.fixture
-        result = subprocess.run([sys.executable, rc.__file__, str(fixture.repo),
-                                 "--denylist", str(fixture.denylist),
-                                 "--reports", str(fixture.root / "reports"), *args],
+        testbed = self.testbed
+        result = subprocess.run([sys.executable, rc.__file__, str(testbed.repo),
+                                 "--denylist", str(testbed.denylist),
+                                 "--reports", str(testbed.root / "reports"), *args],
                                 capture_output=True, text=True, timeout=60)
         self.assertNotIn("larch", (result.stdout + result.stderr).lower())
         locator = json.loads(result.stdout.splitlines()[0])["report"]
-        report_path = fixture.root / "reports" / locator
+        report_path = testbed.root / "reports" / locator
         raw_json, markdown = report_path.read_text(), report_path.with_suffix(".md").read_text()
         self.assertNotIn("larch", (raw_json + markdown).lower())
         self.assertIn("## Reviewable private-term hits (nonblocking)", markdown)
         return result.returncode, json.loads(raw_json), markdown
 
     def test_reviewable_only_cli_and_export_remain_ready_and_redacted(self):
-        fixture = self.fixture
-        (fixture.repo / "overlarch.txt").write_text("ordinary\noverlarch\n")
-        fixture.commit("Review overlarch")
-        code, report, markdown = self.cli("--verify", "--scrub-plan", "--export", str(fixture.root / "export"))
+        testbed = self.testbed
+        (testbed.repo / "overlarch.txt").write_text("ordinary\noverlarch\n")
+        testbed.commit("Review overlarch")
+        code, report, markdown = self.cli("--verify", "--scrub-plan", "--export", str(testbed.root / "export"))
         self.assertEqual(code, 0)
         for target in (report, report["export"]):
             self.assertTrue(target["ready"])
@@ -153,10 +153,10 @@ class PrivacyIntegrationTests(unittest.TestCase):
         self.assertIn("[path-", markdown)
 
     def test_mixed_hits_remain_blocking_and_scrub_only_requires_blockers(self):
-        fixture = self.fixture
-        (fixture.repo / "data.txt").write_text("overlarch\nlarch\ngetLarchValue\n")
-        fixture.commit("Fixture")
-        code, report, _ = self.cli("--verify", "--scrub-plan", "--export", str(fixture.root / "export"))
+        testbed = self.testbed
+        (testbed.repo / "data.txt").write_text("overlarch\nlarch\ngetLarchValue\n")
+        testbed.commit("Testbed")
+        code, report, _ = self.cli("--verify", "--scrub-plan", "--export", str(testbed.root / "export"))
         self.assertEqual(code, 1)
         for target in (report, report["export"]):
             self.assertFalse(target["ready"])
@@ -167,13 +167,13 @@ class PrivacyIntegrationTests(unittest.TestCase):
         self.assertTrue(all(f["line"] in {2, 3} for f in report["scrub_plan"]["replace_or_remove"]))
 
     def test_exact_denylist_approval_is_visible_and_limited_to_its_finding(self):
-        fixture = self.fixture
-        (fixture.repo / "public-data.csv").write_text("larch\n")
-        (fixture.repo / "other-data.csv").write_text("larch\n")
+        testbed = self.testbed
+        (testbed.repo / "public-data.csv").write_text("larch\n")
+        (testbed.repo / "other-data.csv").write_text("larch\n")
         approval = {"scope": "tree", "kind": "denylist", "path": "public-data.csv",
                     "fingerprint": rc.fingerprint("larch"), "reason": "Verified this exact public IRS record."}
-        manifest = {**fixture.manifest, "approvals": [approval]}
-        report = rc.audit(fixture.repo, ["larch"], manifest, [], False, fixture.root / "reports", 10)
+        manifest = {**testbed.manifest, "approvals": [approval]}
+        report = rc.audit(testbed.repo, ["larch"], manifest, [], False, testbed.root / "reports", 10)
         matched = next(f for f in report["findings"] if f["path"] == "public-data.csv")
         unmatched = next(f for f in report["findings"] if f["path"] == "other-data.csv")
         self.assertTrue(matched["reviewed"])
@@ -182,7 +182,7 @@ class PrivacyIntegrationTests(unittest.TestCase):
         self.assertEqual(matched["reason"], approval["reason"])
         self.assertFalse(unmatched["reviewed"])
         self.assertNotIn("larch", json.dumps(report).lower())
-        report_dir = fixture.root / "accepted-report"
+        report_dir = testbed.root / "accepted-report"
         report_dir.mkdir()
         rc.write_reports(report_dir, report)
         markdown = (report_dir / "report.md").read_text()
@@ -202,21 +202,21 @@ class PrivacyIntegrationTests(unittest.TestCase):
         self.assertFalse(scanner.findings[0]["reviewed"])
 
     def test_unmatched_denylist_approval_is_reported_stale(self):
-        fixture = self.fixture
+        testbed = self.testbed
         approval = {"scope": "tree", "kind": "denylist", "path": "gone.csv",
                     "fingerprint": "0123456789abcdef", "reason": "Verified public data."}
-        report = rc.audit(fixture.repo, ["larch"], {**fixture.manifest, "approvals": [approval]},
-                          [], False, fixture.root / "reports", 10)
+        report = rc.audit(testbed.repo, ["larch"], {**testbed.manifest, "approvals": [approval]},
+                          [], False, testbed.root / "reports", 10)
         self.assertEqual(report["stale_approvals"], [{key: approval[key] for key in
                          ("scope", "kind", "path", "fingerprint")}])
-        report_dir = fixture.root / "stale-report"
+        report_dir = testbed.root / "stale-report"
         report_dir.mkdir()
         rc.write_reports(report_dir, report)
         self.assertIn("## Stale approvals", (report_dir / "report.md").read_text())
 
     def test_reviewable_hit_cannot_relax_other_gates_or_redaction(self):
-        fixture = self.fixture
-        (fixture.repo / "data.txt").write_text("overlarch\n")
+        testbed = self.testbed
+        (testbed.repo / "data.txt").write_text("overlarch\n")
         code, report, _ = self.cli()
         self.assertEqual(code, 2)
         self.assertGreater(report["reviewable_count"], 0)
@@ -226,13 +226,13 @@ class PrivacyIntegrationTests(unittest.TestCase):
         self.assertNotIn("larch", json.dumps(diagnostic))
 
     def test_deleted_history_and_commit_identity_components_still_block(self):
-        fixture = self.fixture
-        (fixture.repo / "larch.txt").write_text("larch\n")
-        fixture.git("config", "user.name", "Larch")
-        fixture.commit("getLarchValue")
-        fixture.git("rm", "--", "larch.txt")
-        fixture.git("config", "user.name", "Fixture")
-        fixture.git("commit", "-q", "-m", "Remove")
+        testbed = self.testbed
+        (testbed.repo / "larch.txt").write_text("larch\n")
+        testbed.git("config", "user.name", "Larch")
+        testbed.commit("getLarchValue")
+        testbed.git("rm", "--", "larch.txt")
+        testbed.git("config", "user.name", "Testbed")
+        testbed.git("commit", "-q", "-m", "Remove")
         code, report, _ = self.cli("--verify")
         self.assertEqual(code, 1)
         self.assertTrue(any(f["scope"] == "history" and f["kind"] == "denylist" for f in report["findings"]))

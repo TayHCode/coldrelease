@@ -1,24 +1,110 @@
 # Coldrelease
 
-**Is this agent-made repository safe to publish?** Coldrelease scans the files
-Git can see (except generated folders such as `node_modules` and `.venv`) and
-every commit for private names, emails, home paths, internal hostnames, secrets,
-license gaps and missing project documents, without printing what it matched.
-It then builds a fresh one-commit export of those files minus exclusions, with a
-receipt tied to the checks that passed. Publish that export, not the original.
+**Private repository in. Clean public repository out.** Point Coldrelease at a
+private repository you want to open-source. It scans the files Git can see
+(except generated folders such as `node_modules` and `.venv`) and every commit
+for secrets, private names, emails, home paths, internal hostnames, license gaps
+and missing project documents, without printing what it matched. New runs keep
+their state outside the repository, and you publish a fresh export (one commit
+on first publication, one added commit after), not the original or its history.
 
-Requires Python 3.11+ and Git. Uses only the Python standard library.
+The workflow:
+
+1. **Preflight** and **plan**: audit the source and its history, and list the
+   files the public export will contain.
+2. **Export**: build the one-commit copy minus exclusions, run its declared
+   tests, and write a receipt tied to the checks that passed.
+3. **Approve**: check the owner has not said no and record the release for the
+   publication guard; it prints one guarded `git push`.
+4. **Push** and **publish**: run that push, then record it; `ship` also runs the
+   final gate on what was published.
+
+[`coldrelease release`](docs/coldrelease-workflow.md#release-every-step-in-one-guided-command)
+runs the steps in order and stops when one needs a decision or does not pass. Read
+[Honest limitations](#honest-limitations) before you rely on a PASS.
+
+Requires Python 3.11+ with its `venv` module, Git, and gitleaks or trufflehog:
+`approve` needs a secret scanner PASS on the export. Uses only the Python
+standard library.
 
 ## Quickstart
 
-From a local clone, install into a virtual environment:
+On Debian or Ubuntu, install the prerequisites as root first. Minimal images can
+lack Python and Git, and stock images lack `python3-venv`, without which
+`python3 -m venv` fails with `ensurepip is not available`. Then install
+[gitleaks](https://github.com/gitleaks/gitleaks) on your `PATH` for the demo:
+
+```sh
+apt-get update
+apt-get install -y git python3-venv
+```
+
+Then, as your normal user, install Coldrelease from a clone of this repository
+into a virtual environment:
 
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install .
+coldrelease --version
 coldrelease --help
 ```
+
+### Try the release workflow on a demo
+
+Stay in the clone with the virtual environment active. This creates a small demo
+repository, a demo denylist kept outside it, and a local bare repository to
+publish to. Nothing leaves the machine. It also names the demo denylist as this
+machine's reference denylist, unless `~/.coldlocker/release-denylist.sha256` already exists.
+
+```sh
+mkdir -p ~/coldrelease-demo/.github/ISSUE_TEMPLATE ~/coldrelease-demo/tests ~/demo-private
+cp LICENSE ~/coldrelease-demo/
+cd ~/coldrelease-demo
+printf '# Demo\n\npython -m unittest discover -s tests -q\n\n## Limitations\n\nNone known.\n' > README.md
+printf 'Open a pull request.\n' > CONTRIBUTING.md
+printf 'Report security issues privately.\n' > SECURITY.md
+printf 'name: Bug\ndescription: Report a bug\n' > .github/ISSUE_TEMPLATE/bug.yml
+printf 'import unittest\n\n\nclass DemoTest(unittest.TestCase):\n    def test_ok(self):\n        self.assertTrue(True)\n' > tests/test_demo.py
+printf '{"quickstart": [{"file": "README.md", "line": 3, "argv": ["python", "-m", "unittest", "discover", "-s", "tests", "-q"]}], "checks": [{"role": "tests", "argv": ["python", "-m", "unittest", "discover", "-s", "tests", "-q"]}]}\n' > release-check.json
+git init -q -b main
+git add .
+git -c user.name='Demo contributors' -c user.email=demo commit -qm 'Initial demo'
+printf '["my-codename", "My Name"]\n' > ~/demo-private/terms.json
+test -e ~/.coldlocker/release-denylist.sha256 || { mkdir -p ~/.coldlocker && sha256sum ~/demo-private/terms.json | cut -c1-64 > ~/.coldlocker/release-denylist.sha256; }
+git init -q --bare ~/coldrelease-demo-public.git
+```
+
+Then run the workflow: preflight, plan with gitleaks, export with verification,
+approve, and the guarded push and publish that `status` prints.
+
+```sh
+coldrelease preflight ~/coldrelease-demo --run demo --denylist ~/demo-private/terms.json
+coldrelease plan ~/coldrelease-demo --run demo --denylist ~/demo-private/terms.json --scanner gitleaks
+coldrelease export ~/coldrelease-demo --run demo --denylist ~/demo-private/terms.json --verify
+coldrelease approve ~/coldrelease-demo --run demo --denylist ~/demo-private/terms.json --verify --target ~/coldrelease-demo-public.git --ref refs/heads/main
+eval "$(coldrelease status ~/coldrelease-demo --run demo --denylist ~/demo-private/terms.json | sed -n 's/^next: //p')"
+coldrelease publish ~/coldrelease-demo --run demo --denylist ~/demo-private/terms.json --verify --target ~/coldrelease-demo-public.git --ref refs/heads/main
+git --git-dir ~/coldrelease-demo-public.git log --oneline main
+```
+
+Each `coldrelease` step prints JSON with `"outcome": "PASS"`, and the last command
+shows the single fresh commit that was published. `status` printed the exact
+`git push --force-with-lease` that `approve` prepared as `next`, and `publish` as
+`then`, which pushes nothing and only records what the push did. Run them as two
+commands: the publication guard allows the push only on its own. A local target has no
+publication guard; for a GitHub target the Coldlocker guard checks that push
+against the record `approve` wrote (see
+[the guided release](docs/coldrelease-workflow.md#approve-and-push-through-the-publication-guard)).
+Run state lives outside the source in
+`$XDG_STATE_HOME/coldrelease/runs/<source>-<hash>/<run>/` (default `~/.local/state`, mode 0700).
+`plan` wrote the run's `public-export.txt`; review it before `export`.
+To see where a run is and the exact next command, run
+`coldrelease status ~/coldrelease-demo --run demo --denylist ~/demo-private/terms.json`.
+Instead of running the steps one by one, [`coldrelease release`](docs/coldrelease-workflow.md#release-every-step-in-one-guided-command)
+runs every step that needs no decision and stops only for one.
+
+### Your own repository
 
 Print the required files, accepted README headings and manifest shape without a scan:
 
@@ -26,7 +112,24 @@ Print the required files, accepted README headings and manifest shape without a 
 coldrelease --requirements
 ```
 
-Then supply your **external** denylist and private report destination:
+Then run the same steps with your repository's path, a new run name, your own
+denylist and your real target URL. The denylist lists the private names, codenames
+and hosts that must never be published; keep it outside the repository. Only the
+owner says yes or no to a public push, with `"public_push"` in
+`~/.coldlocker/guards.json`, and only the owner places the reference denylist.
+[The workflow guide](docs/coldrelease-workflow.md) explains each step, external
+scanners, [`status`](docs/coldrelease-workflow.md#see-where-a-run-is) and the
+one-command `ship`.
+
+When a step FAILs, stderr names each finding and its fix. If you review a finding
+and it is safe to publish, such as your own name in LICENSE, add an exact approval
+to `release-check.json` (see [Approving findings](#approving-findings)) and rerun.
+Secrets cannot be approved.
+
+## Single-command audit
+
+The original flags still audit and export without a workflow run. Supply your
+**external** denylist and private report destination:
 
 ```sh
 coldrelease /path/to/repository --denylist /private/terms.json --reports /private/reports --scrub-plan
@@ -46,14 +149,20 @@ python3 -m unittest discover -s tests -q
 ```
 
 Alternatively run `python3 release_check.py` directly without installing it.
-`RELEASE_CHECK_DENYLIST` and `RELEASE_CHECK_REPORTS` supply the two path defaults.
-With no report override, reports go to `~/.local/state/release-check`.
-For the six-command human-approved release workflow, see [the release workflow](docs/coldrelease-workflow.md).
+`COLDRELEASE_DENYLIST` and `COLDRELEASE_REPORTS` supply the two path defaults.
+The old `RELEASE_CHECK_DENYLIST` and `RELEASE_CHECK_REPORTS` still work when the new name is unset, with a one-line deprecation notice.
+With no report override, reports go to `~/.local/state/coldrelease`; an existing `~/.local/state/release-check` is left in place.
 
 The denylist is mandatory, read only at runtime and never copied to an export.
 Keep it outside the repository. Formats: a JSON string array, an object containing
 `terms`, an object containing `categories` with lists or `{terms: [...]}`, or one
-term per line. Term indices are zero-based, in input order; category order is
+term per line. A JSON object may also hold owner detectors for words that are
+private only to you, such as internal command names:
+`"patterns": [{"kind": "team-cli", "pattern": "<regex>"}]`. Each pattern matches
+case-insensitively in the tree, paths and history, including across a line break,
+and blocks as a personal finding of that kind. A kind must be lowercase and not a
+built-in one, and a pattern must compile and match at least one character, or the run
+stops with `denylist-schema`. Term indices are zero-based, in input order; category order is
 JSON insertion order. Matching stays case-insensitive and literal. Purely alphabetic
 terms use Unicode letters (`str.isalpha()`): a whole word or separate component
 blocks, while a hit confined to one longer letter component is reviewable.
@@ -92,21 +201,48 @@ and full branch ref with the destination reviewed for that release:
 coldrelease /path/to/published-export --denylist /private/terms.json --reports /private/reports --verify --published-target https://github.com/example/project.git refs/heads/main
 ```
 
-The command queries the destination with `git ls-remote --refs` before scanning.
+The command queries the destination with `git ls-remote` before scanning.
 Only branch refs under `refs/heads/` are accepted. Replacement refs and graft files are rejected.
 The repository root must be clean, including untracked and ignored files, and its
 HEAD must equal the published ref's exact commit. Index flags that hide working
 file changes are rejected. The executable-bit check overrides `core.filemode=false`. A stale local tracking ref or a matching tree at a
-different commit cannot satisfy the guard. Supply the same reviewed external
+different commit cannot satisfy the guard. The destination must hold no ref
+other than the published branch and known GitHub-managed PR refs on explicit github.com HTTPS or Git SSH targets
+`refs/pull/<positive-number>/head` and `refs/pull/<positive-number>/merge`.
+These PR refs are explicitly accepted by policy, even at a different commit;
+the gate does not scan their history. A lightweight `refs/tags/*` tag at the published commit or one of its ancestors, such as a GitHub release tag from this or an earlier release, is also accepted and listed in `published_target.tags`, unless its name holds a private term. Any other branch, tag (including an annotated tag) or ref returns FAIL with exit 1 and `published-extra-refs`,
+because it can make unexported history public. An advertised `HEAD` must point at
+the published branch's commit; a detached `HEAD` at any other commit, which a
+plain clone would check out, returns the same FAIL. Supply the same reviewed external
 `--manifest` and other audit options used for the export when needed.
+Add `--expected-export EXPORT_HEAD EXPORT_TREE` with the approved receipt's
+`export_head` and `export_tree` to bind the gate to that export: when the target
+holds any other commit or tree, before or after the scan, it returns FAIL with exit 1
+and `published-receipt-mismatch`. `ship`, `confirm-public` and the command printed by `status` always pass it.
 
 After scanning, the command queries the destination again and rechecks HEAD, tree,
 and the full inventory digest. Missing or unavailable refs, a stale target, or any
-observed candidate or remote change returns INCOMPLETE with exit 2. JSON stderr
+observed candidate or remote change returns INCOMPLETE with exit 2; an extra ref
+that appears during the scan returns FAIL `published-extra-refs`. JSON stderr
 names the blocking reason. No PASS report is written when the guard fails.
+
+Git runs without your global and system git config, so a private HTTPS target
+returns `published-ref-unavailable`. To gate it before it is made public, add
+`--use-git-credentials`. Then the destination queries, and nothing else, may
+ask the `credential.helper` and `credential.<url>.helper` entries from your global
+git config (for example the one `gh auth setup-git` writes). No other global
+setting is used. Helper values are passed through the environment, never on the
+command line, and credentials never appear in output or reports. Without a
+global helper, the flag returns INCOMPLETE `git-credentials-missing`.
+`approve`, `publish` and `ship` take the same flag. After the guarded push, `ship`
+records it and runs this gate on a fresh clone in one command; see
+[the workflow guide](docs/coldrelease-workflow.md#ship-publish-and-gate-in-one-command).
 Successful guard checks add `published_target` with `head`, `tree`, and `inventory`
 to the report and stdout summary; the audit's findings still determine readiness.
 The result describes the published ref at those checks, not future publications.
+On a GitHub target, a read-only `gh api` call adds `github_settings`: the status of
+secret scanning, push protection and Dependabot security updates, with a warning
+for each one that isn't enabled. It never changes the outcome.
 
 This mode does not fetch, update the checkout, or publish. If the target is stale,
 prepare a clean checkout of the current published commit and rerun the guarded
@@ -124,16 +260,38 @@ their results do not establish that the candidate is the latest published export
 - Every commit reachable from local refs and reflogs, its author/committer/message,
   every historical filename and distinct blob/path pair. Shallow history blocks.
 - Denylist terms, email/phone/IP addresses, tailnet and internal hostnames, home
-  paths, known-private repository references, credential files, common key formats,
-  labelled credentials and high-entropy strings. Media is listed for human review.
-- Standard MIT license wording and metadata consistency; dependency metadata and
+  paths, known-private repository references, and any owner `patterns` from the
+  denylist. Also credential files, common key formats, labelled credentials and
+  high-entropy strings. Media is listed for human review. JPEG/PNG EXIF (including
+  GPS and UTF-16 Windows tags), PNG text chunks and PDF Info strings are decoded
+  and scanned as `file!metadata`; a block that cannot be decoded is INCOMPLETE
+  `metadata-unreadable`. Office properties are scanned as zip members.
+- The export scan also treats commit author/committer names and emails and
+  home-path usernames found in source history as private terms, so they need no
+  denylist entry. Bots, `noreply@` senders, the export identity, noreply emails and
+  generic home folders such as `runner` or `user` are skipped. Hits block like denylist.
+- Deployment settings (`deployment-config`): Terraform `*.tfstate*` and
+  `*.tfvars`, `kubeconfig` and `.kube/config`, `.npmrc`, `.pypirc` and
+  `.docker/config.json` auth entries, Kubernetes `kind: Secret` with
+  `data`/`stringData`, and literal values for secret-named keys in GitHub Actions
+  `env:`/`with:`, Dockerfile `ENV`/`ARG` and compose `environment:` all fail.
+  `${{ secrets.NAME }}` and `${VAR}` references pass. `runs-on: self-hosted`
+  gives `manual-review`; approve it by exact scope, kind, path and fingerprint.
+- Standard MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause or ISC root license wording,
+  one licence across all root license files, and metadata consistency; dependency metadata and
   license-file evidence after installation. Dependency-free `package.json` projects
   are accepted under the restrictions below. Other root licenses and dependency
   ecosystems require manual review. NOTICE, UPSTREAM and license files are protected.
-- README, limitations, CONTRIBUTING, SECURITY, issue templates, tests and declared
+- README, limitations, CONTRIBUTING, SECURITY, issue templates (GitHub, GitLab or
+  Gitea locations; see `--requirements`), tests and declared
   quickstart, test, lint and type commands. Configured Ruff/mypy checks must be listed.
 
-Pass known-private repositories with repeated `--private-repo owner/name` flags.
+Pass known-private repositories with repeated `--private-repo` flags. Each takes
+`owner/name` (or `group/sub/project`) or a clone URL on any host, such as
+`https://gitlab.com/group/sub/project.git` or `git@HOST:owner/name.git`.
+The host is dropped, so the HTTPS, SSH and bare path forms all match.
+Each one also blocks its bare repository name as a whole word, so `o/name` and a
+lone `name` are caught too.
 The tool never calls a hosting API to infer visibility. Supply this list separately
 from the repository; public and private URLs look the same without that evidence.
 
@@ -147,6 +305,8 @@ from arbitrary README prose. `argv` avoids shell interpretation.
 With `--verify` and no manifest, no commands run. The report blocks with
 `quickstart-not-declared`, `test-command-not-declared` and
 `verification-not-configured`; provide a manifest with exact commands to proceed.
+The release workflow's `plan` instead proposes a recipe in the run folder for you
+to review and accept; see [the workflow guide](docs/coldrelease-workflow.md).
 
 ```json
 {
@@ -169,7 +329,12 @@ The first commands must install the project and any required test tools. Each
 quickstart/check command's exit code and output fingerprint are recorded; its raw
 output is discarded. Failed venv creation is the exception: reports include a
 privacy-redacted diagnostic tail of at most 1000 characters.
-`--timeout` bounds each command (default 300 seconds). Pip may contact package indexes.
+`--timeout` bounds each command (default 300 seconds). A quickstart or check entry
+can set its own `"timeout"` in whole seconds, for example
+`{"role": "tests", "argv": [...], "timeout": 1800}`, so a slow suite declares its
+budget in the manifest. The receipt binds it with the rest of the manifest. A command
+that runs past its limit is killed and FAILs with `command-timeout`, naming the role,
+the limit and where it came from. Pip may contact package indexes.
 
 For non-Python commands, optionally add `"verify_tools": ["node"]` to the manifest.
 The list accepts at most eight distinct bare executable names matching
@@ -272,7 +437,14 @@ authenticate the author of an approval.
 
 ### Approving findings
 
-Copy the exact `scope`, `kind`, `path` and `fingerprint` from a finding. Add a
+After a `check` or `export`, run `coldrelease review /path/to/source --run R`. It
+lists each unresolved finding by scope, path, line and kind, never the value, and
+asks for one decision each: `a` approve with a reason, `e` exclude the file from
+the export, `f` fix it in the source, or `s` skip. Decisions go into the run's
+`triage.json`; the next `check` applies them. Approvals bind to the file's current
+bytes, and approve or exclude needs a source file path.
+
+To approve by hand instead, copy the exact `scope`, `kind`, `path` and `fingerprint` from a finding. Add a
 human-readable `reason` for denylist approvals. This supports verified public data,
 such as a public IRS record; accepted findings stay visible in reports, and
 approvals that match nothing are listed as stale. Never include the private term
@@ -388,7 +560,9 @@ lines remains readable.
 
 `--scrub-plan` lists exact paths to drop, findings to replace/remove by term index or
 fingerprint, media to review and the requirement to flatten history. It prints no
-replacement source strings. Make content fixes in a source worktree and rerun.
+replacement source strings. Make content fixes in a source worktree and rerun, or let
+`coldrelease sanitize` apply reviewed fixes to the run's candidate copy (see
+[docs/coldrelease-workflow.md](docs/coldrelease-workflow.md#sanitize-a-candidate-copy)).
 
 `--export DIR` requires a new directory outside the source (an existing one stops
 with `export-destination-exists` and a plain stderr line) and copies the current
@@ -406,7 +580,18 @@ paths, line numbers, term indices, object IDs and one-way SHA-256 fingerprints (
 matched content, credentials or denylist terms are included. Quickstart/check
 command output is represented only by fingerprints; the bounded, redacted venv
 diagnostic tail is included when venv creation fails. The summary
-prints only a relative report locator. Exit codes: 0 = PASS, 1 = FAIL, 2 = INCOMPLETE.
+prints only a relative report locator; without `--reports`, stderr also names the
+absolute `report.json` path. Exit codes: 0 = PASS, 1 = FAIL, 2 = INCOMPLETE.
+Each report has a `coverage` block, also rendered in `report.md`: every check
+category with its status (`checked`, `incomplete`, `failed`, `not run`,
+`not supported` or `manual review`; application security is `not run` and OCR is `not supported`; on
+`export` the external scanners, and application security when bandit is selected, are `run after this report`, with outcomes in
+`scanners.json`), the scanned files an export leaves out by rule (`default`,
+`manifest`, `allowlist`; untracked gitignored files are never scanned or exported
+and are not listed, but tracked files are scanned and exported even when they match
+`.gitignore`), media still pending review, the Git refs whose history was scanned
+(local refs, plus `HEAD` and `reflogs`), and a residual-risk statement. Secrets and
+personal data are `incomplete` while any coverage finding is unresolved.
 With an export, the exit code follows the export outcome; the original repository
 can still have history findings.
 A failed run prints a JSON error on stderr naming its cause: an `error` code and, for
@@ -415,6 +600,15 @@ unexpected failures, a `detail` such as `PermissionError (EACCES)` or
 Workflow commands print the same `detail` in their JSON beside `workflow-incomplete`.
 The repository path must be the top-level folder of its Git repository; a subfolder
 stops with `not-repository-root`.
+
+A workflow command can also take a remote instead of a checkout: `OWNER/REPO` (GitHub),
+`https://`, `ssh://`, `file://` or `git@host:path`. `preflight` makes a fresh `--mirror`
+clone of every ref into the run's state folder, records the URL and each ref's SHA in
+`source.json`, and checks out the default branch beside it; later commands with the same
+remote and `--run` use that clone and never fetch or push. `--use-git-credentials` lets
+that clone ask your global Git credential helpers. `approve` refuses that remote or its mirror as `--target` (`target-is-source`). HTTPS URLs that carry a user, query
+or fragment stop with `source-url-credentials`; a failed clone stops with
+`source-clone-failed`, and a later command before `preflight` stops with `source-not-cloned`.
 
 ## Outcome and export receipt
 
@@ -464,23 +658,28 @@ one plain stderr line saying what is wrong, without echoing any path or value.
 
 The receipt is a hash binding, not a signature: it does not authenticate who wrote
 it. Keep it outside the export and read it from the trusted job record. The workflow
-can run optional external scanners and requires a human SSH signature before its
-leased publish. PASS means only that the declared checks passed on that export.
+requires a gitleaks or trufflehog PASS on the export, the owner's yes and the
+reference denylist before `approve` records a release, and the publication guard
+checks the one guarded push against that record. PASS means only that the declared checks passed on that export.
 
 ## Honest limitations
 
 This is a release gate, not a security or legal guarantee. False positives are
 expected. Entropy cannot identify every secret. The tool does not OCR images,
-recognize faces, unpack archives, discover nonlocal Git refs or unreachable objects,
-or determine hosted repository visibility. History coverage is local refs/reflogs;
-fetch any required refs yourself first. Symlinks and submodules block coverage and
-are never followed. Git LFS pointers block unscanned external content. Archives and
-binary formats require separate human review. Global Git hooks, filters and signing
-configuration are disabled for the audit's Git operations.
+recognize faces, discover nonlocal Git refs or unreachable objects, or determine
+hosted repository visibility. History coverage is local refs/reflogs; fetch refs
+first, or pass a remote so `preflight` mirrors them. Symlinks and submodules block coverage and are never followed. Git LFS pointers
+block unscanned content. Zip (docx/xlsx/jar), tar, gzip and PDF Flate text is expanded
+in memory and scanned as `file.zip!member`; going over 64 MiB, 10,000 members or 4
+levels is INCOMPLETE `archive-limit`. Archives and binaries still need human review. Global
+Git hooks, filters and signing configuration are disabled for the audit's Git operations.
 
 Fresh HOME/venv is isolation from credentials and caches, **not a security sandbox**.
 Only verify repositories and manifest commands you trust; their code can access the
-machine and network. Real browser, account, hardware and deployment checks stay
+machine and network. To run them in a disposable Coldbox VM instead, add
+`--verify-backend coldbox`; the receipt then records the VM image and a digest of
+the VM's output. If Coldbox does not answer, verification is INCOMPLETE
+`verify-backend-unavailable` unless you also pass `--allow-host-fallback`. Real browser, account, hardware and deployment checks stay
 manual. This tool starts no services or timers itself.
 
 ## Development
@@ -543,10 +742,10 @@ unknown license candidate, classifier recognition, bound review evidence and
 malformed metadata. Complete standard texts are bundled under `tests/fixtures/licenses`
 with their original notices, so the proof does not depend on host-installed files.
 
-### Exact source reviews for broad secret heuristics
+### Exact source reviews for broad secret heuristics and credential URLs
 
-Only `entropy` and `assigned-secret` findings can receive a manual false-positive
-review. In addition to the existing exact `scope`, `kind`, `path`, and
+Only `entropy`, `assigned-secret` and `credential-url` findings can receive a manual
+false-positive review, for example a URL whose password is a placeholder. In addition to the existing exact `scope`, `kind`, `path`, and
 `fingerprint` fields, the approval must have `classification: "false-positive"`,
 a nonempty reason, the exact `line` and `column` occurrence, and `source_sha256` matching the entire source file. A byte
 change invalidates that review. Reasons must not contain denylist terms.

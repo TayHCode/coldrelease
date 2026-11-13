@@ -15,16 +15,16 @@ import release_check as rc
 
 class DependencyTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
-        self.info = self.root / "fixture_name-1.0.dist-info"
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tempdir.cleanup)
+        self.root = Path(self.tempdir.name)
+        self.info = self.root / "testbed_name-1.0.dist-info"
         self.info.mkdir()
-        self.package = {"name": "fixture_name", "version": "1.0", "expression": None,
+        self.package = {"name": "testbed_name", "version": "1.0", "expression": None,
                         "license": None, "classifiers": [], "license_files": []}
 
     def installed(self, expression=None, label=None, classifiers=(), text=None):
-        headers = ["Metadata-Version: 2.4", "Name: fixture_name", "Version: 1.0"]
+        headers = ["Metadata-Version: 2.4", "Name: testbed_name", "Version: 1.0"]
         if expression:
             headers.append("License-Expression: " + expression)
         if label:
@@ -92,7 +92,7 @@ class DependencyTests(unittest.TestCase):
     def test_unlabelled_file_acceptance_and_missing_file(self):
         result, findings = self.audit(self.installed(text=Path(rc.__file__).with_name("LICENSE").read_text()))
         self.assertEqual(findings, [])
-        self.assertEqual(result["accepted_on_license_file"], ["@dependency/fixture_name"])
+        self.assertEqual(result["accepted_on_license_file"], ["@dependency/testbed_name"])
         self.assertEqual(self.audit(self.installed(label="UNKNOWN", text=Path(rc.__file__).with_name("LICENSE").read_text()))[0]["blocked"], 0)
         self.assertEqual(self.audit(self.installed(text=None))[0]["blocked"], 1)
         self.assertEqual(self.audit(self.installed(expression="MIT", text=None))[0]["blocked"], 0)
@@ -102,7 +102,7 @@ class DependencyTests(unittest.TestCase):
         self.assertEqual(self.audit()[0]["blocked"], 1)
 
     def test_package_path_is_not_mistaken_for_a_license_file(self):
-        renamed = self.root / "license_fixture-1.0.dist-info"
+        renamed = self.root / "license_testbed-1.0.dist-info"
         self.info.rename(renamed)
         self.info = renamed
         raw = self.installed(text=None)
@@ -164,12 +164,12 @@ class DependencyTests(unittest.TestCase):
     def test_existing_evidence_and_normalized_package_keys(self):
         raw = self.installed(expression="LicenseRef-Ambiguous", text="Synthetic licence evidence")
         evidence = {"version": "1.0", "spdx": "MIT", "sha256": hashlib.sha256(b"Synthetic licence evidence").hexdigest()}
-        for key in ("fixture_name", "fixture-name"):
+        for key in ("testbed_name", "testbed-name"):
             self.assertEqual(self.audit(raw, evidence={key: evidence})[0]["blocked"], 0)
         for field in ("version", "sha256"):
-            self.assertEqual(self.audit(raw, evidence={"fixture-name": {**evidence, field: "stale"}})[0]["blocked"], 1)
-        self.assertEqual(self.audit(self.installed(expression="GPLv3"), evidence={"fixture-name": evidence})[0]["blocked"], 1)
-        self.assertEqual(self.audit(self.installed(classifiers=["License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)"]), evidence={"fixture-name": evidence})[0]["blocked"], 1)
+            self.assertEqual(self.audit(raw, evidence={"testbed-name": {**evidence, field: "stale"}})[0]["blocked"], 1)
+        self.assertEqual(self.audit(self.installed(expression="GPLv3"), evidence={"testbed-name": evidence})[0]["blocked"], 1)
+        self.assertEqual(self.audit(self.installed(classifiers=["License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)"]), evidence={"testbed-name": evidence})[0]["blocked"], 1)
 
     def test_review_is_visible_and_requires_reason(self):
         raw = self.installed(expression="GPLv3")
@@ -186,11 +186,11 @@ class DependencyTests(unittest.TestCase):
     def test_review_is_bound_to_supplied_dependency_evidence(self):
         raw = self.installed(expression="LicenseRef-Ambiguous", text="Synthetic licence evidence")
         entry = {"version": "1.0", "spdx": "GPLv3", "sha256": self.package["license_files"][0]["hash"]}
-        evidence = {"fixture-name": entry}
+        evidence = {"testbed-name": entry}
         hit = self.audit(raw, evidence=evidence)[1][0]
         approval = {**hit, "reason": "Accepted exact evidence."}
         self.assertTrue(self.audit(raw, approvals=[approval], evidence=evidence)[1][0]["reviewed"])
-        changed = {"fixture-name": {**entry, "spdx": "AGPLv3"}}
+        changed = {"testbed-name": {**entry, "spdx": "AGPLv3"}}
         self.assertFalse(self.audit(raw, approvals=[approval], evidence=changed)[1][0]["reviewed"])
         self.assertFalse(self.audit(raw, approvals=[approval])[1][0]["reviewed"])
 

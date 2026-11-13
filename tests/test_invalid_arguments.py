@@ -16,6 +16,7 @@ class InvalidArgumentsTests(unittest.TestCase):
     def run_cli(self, args, reason, script="release_check.py"):
         env = os.environ.copy()
         env.pop("RELEASE_CHECK_DENYLIST", None)
+        env.pop("COLDRELEASE_DENYLIST", None)
         result = subprocess.run(
             [sys.executable, script, *args],
             cwd=Path(__file__).resolve().parents[1], env=env,
@@ -40,7 +41,7 @@ class InvalidArgumentsTests(unittest.TestCase):
             with self.subTest(command=command):
                 result = self.run_cli(
                     [command, "/tmp"],
-                    "unknown command; use one of: preflight, plan, check, export, approve, publish",
+                    "unknown command; use one of: preflight, plan, check, export, approve, publish, ship, status, confirm-public, prune, review, sanitize, release, survey",
                     script="release_workflow.py",
                 )
                 self.assertNotIn(command, result.stdout + result.stderr)
@@ -53,7 +54,7 @@ class InvalidArgumentsTests(unittest.TestCase):
 
     def test_missing_denylist(self):
         self.run_cli([".", "--reports", "/tmp/private-reports"],
-                     "pass --denylist or set RELEASE_CHECK_DENYLIST")
+                     "pass --denylist or set COLDRELEASE_DENYLIST")
 
     def test_missing_repository_path(self):
         with tempfile.TemporaryDirectory() as root:
@@ -100,6 +101,18 @@ class InvalidArgumentsTests(unittest.TestCase):
                         "reasons": ["git-read-failed"], "notice": release_workflow.NOTICE})
                     self.assertEqual(result.stderr.splitlines(), [
                         "repository path does not exist or is not a directory"])
+
+    def test_workflow_relative_overlong_path_is_local(self):
+        path = "private-missing/" + "x" * 256
+        result = subprocess.run(
+            [sys.executable, "release_workflow.py", "preflight", path],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertNotIn(path, result.stdout + result.stderr)
+        self.assertEqual(json.loads(result.stdout), {
+            "outcome": "INCOMPLETE", "ready": False,
+            "reasons": ["git-read-failed"], "notice": release_workflow.NOTICE})
 
     def test_unknown_option(self):
         for prefix in (["."], ["plan", "."]):

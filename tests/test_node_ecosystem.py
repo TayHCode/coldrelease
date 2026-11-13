@@ -11,18 +11,18 @@ import test_release_check as fixtures
 
 class NodeEcosystemTests(unittest.TestCase):
     def setUp(self):
-        self.fixture = fixtures.AuditTests()
-        self.fixture.setUp()
-        self.addCleanup(self.fixture.doCleanups)
-        self.repo = self.fixture.repo
-        self.root = self.fixture.root
-        self.manifest = self.fixture.manifest
+        self.testbed = fixtures.AuditTests()
+        self.testbed.setUp()
+        self.addCleanup(self.testbed.doCleanups)
+        self.repo = self.testbed.repo
+        self.root = self.testbed.root
+        self.manifest = self.testbed.manifest
         self.reports = self.root / "reports"
         self.reports.mkdir()
 
     def license_audit(self, package):
         (self.repo / "package.json").write_text(json.dumps(package))
-        scanner = rc.Scanner(self.fixture.terms)
+        scanner = rc.Scanner(self.testbed.terms)
         result = rc.license_audit(self.repo, scanner, self.manifest)
         return result, scanner.findings
 
@@ -116,14 +116,14 @@ class NodeEcosystemTests(unittest.TestCase):
     def test_fix_relative_and_empty_path_entries_cannot_select_tools(self):
         tools = self.repo / "tools"
         tools.mkdir()
-        name = "fixture-private-tool"
+        name = "testbed-private-tool"
         marker = self.repo / "original-source-write"
         fake = tools / name
         fake.write_text("#!/bin/sh\necho touched > '" + str(marker) + "'\n")
         fake.chmod(0o700)
         for cwd, path in ((self.repo, "tools"), (tools, "")):
             with self.subTest(path=path):
-                scanner = rc.Scanner(self.fixture.terms)
+                scanner = rc.Scanner(self.testbed.terms)
                 with chdir(cwd), patch.dict(os.environ, {"PATH": path}), patch.object(rc, "command") as run:
                     result = rc.verify(self.repo, self.reports, scanner,
                                        {**self.manifest, "verify_tools": [name]}, 30)
@@ -139,13 +139,13 @@ class NodeEcosystemTests(unittest.TestCase):
         tools.mkdir()
         for base in (self.repo, reports):
             with self.subTest(base=base.name):
-                target = base / "fixture-private-tool"
+                target = base / "testbed-private-tool"
                 target.write_text("#!/bin/sh\nexit 0\n")
                 target.chmod(0o700)
                 link = tools / target.name
                 link.symlink_to(target)
                 for entry in (base, tools):
-                    scanner = rc.Scanner(self.fixture.terms)
+                    scanner = rc.Scanner(self.testbed.terms)
                     with patch.dict(os.environ, {"PATH": str(entry)}), patch.object(rc, "command") as run:
                         result = rc.verify(self.repo, reports, scanner,
                                            {**self.manifest, "verify_tools": [target.name]}, 30)
@@ -160,19 +160,19 @@ class NodeEcosystemTests(unittest.TestCase):
         reports.mkdir(exist_ok=True)
         tools = self.repo / "tools"
         tools.mkdir()
-        name = "fixture-private-tool"
+        name = "testbed-private-tool"
         fake = tools / name
         fake.write_text("#!/bin/sh\nexit 0\n")
         fake.chmod(0o700)
         manifest = {**self.manifest, "verify_tools": [name]}
         (self.repo / "release-check.json").write_text(json.dumps(manifest))
         with patch.dict(os.environ, {"PATH": str(tools) + os.pathsep + os.environ["PATH"]}):
-            code, out, err = self.fixture.run_cli("--verify", "--export", str(export))
+            code, out, err = self.testbed.run_cli("--verify", "--export", str(export))
         self.assertEqual(code, 2, out + err)
         report = json.loads(next(reports.rglob("report.json")).read_text())
         for audited in (report, report["export"]):
             self.assertEqual([f["kind"] for f in audited["findings"]], ["verify-tool-missing"])
-        scanner = rc.Scanner(self.fixture.terms)
+        scanner = rc.Scanner(self.testbed.terms)
         with patch.dict(os.environ, {"PATH": str(export / "tools")}), patch.object(rc, "command") as run:
             result = rc.verify(self.repo, reports, scanner, manifest, 30, tool_exclusions=(export,))
         self.assertEqual([f["kind"] for f in scanner.findings], ["verify-tool-missing"])
@@ -186,14 +186,14 @@ class NodeEcosystemTests(unittest.TestCase):
                 with self.subTest(name=name, prefix=prefix):
                     path = self.repo / (prefix + name)
                     path.parent.mkdir(exist_ok=True)
-                    path.write_text("fixture")
+                    path.write_text("testbed")
                     if prefix:
-                        self.fixture.git("add", "--", prefix + name)
+                        self.testbed.git("add", "--", prefix + name)
                         path.unlink()
                     _, findings = self.license_audit({})
                     self.assertEqual([f["kind"] for f in findings], ["dependency-ecosystem-manual-review"])
                     if prefix:
-                        self.fixture.git("rm", "--cached", "--", prefix + name)
+                        self.testbed.git("rm", "--cached", "--", prefix + name)
                     else:
                         path.unlink()
 
@@ -205,8 +205,8 @@ class NodeEcosystemTests(unittest.TestCase):
         path.rmdir()
         path = self.repo / "nested/node_modules/example/index.js"
         path.parent.mkdir(parents=True)
-        path.write_text("fixture")
-        self.fixture.git("add", "--", "nested/node_modules/example/index.js")
+        path.write_text("testbed")
+        self.testbed.git("add", "--", "nested/node_modules/example/index.js")
         path.unlink()
         _, findings = self.license_audit({})
         self.assertEqual([f["kind"] for f in findings], ["dependency-ecosystem-manual-review"])
@@ -218,7 +218,7 @@ class NodeEcosystemTests(unittest.TestCase):
                     '[' * 2000 + ']' * 2000):
             with self.subTest(length=len(raw)):
                 (self.repo / "package.json").write_text(raw)
-                scanner = rc.Scanner(self.fixture.terms)
+                scanner = rc.Scanner(self.testbed.terms)
                 rc.license_audit(self.repo, scanner, self.manifest)
                 self.assertEqual([f["kind"] for f in scanner.findings], ["dependency-ecosystem-manual-review"])
 
@@ -226,7 +226,7 @@ class NodeEcosystemTests(unittest.TestCase):
         outside = self.root / "outside.json"
         outside.write_text("{}")
         (self.repo / "package.json").symlink_to(outside)
-        scanner = rc.Scanner(self.fixture.terms)
+        scanner = rc.Scanner(self.testbed.terms)
         rc.license_audit(self.repo, scanner, self.manifest)
         self.assertEqual([f["kind"] for f in scanner.findings], ["dependency-ecosystem-manual-review"])
 
@@ -266,7 +266,7 @@ class NodeEcosystemTests(unittest.TestCase):
     def test_verify_tools_invalid_direct_manifest_does_not_run(self):
         with patch.object(rc, "command") as run:
             with self.assertRaises(rc.AuditError):
-                rc.verify(self.repo, self.reports, rc.Scanner(self.fixture.terms),
+                rc.verify(self.repo, self.reports, rc.Scanner(self.testbed.terms),
                           {**self.manifest, "verify_tools": ["../escape"]}, 30)
         run.assert_not_called()
 
@@ -282,27 +282,27 @@ class NodeEcosystemTests(unittest.TestCase):
                         "[ \"$XDG_CONFIG_HOME\" = \"$HOME/config\" ] || exit 6\n"
                         "[ \"$XDG_CACHE_HOME\" = \"$HOME/cache\" ] || exit 7\n"
                         "[ \"$TMPDIR\" = \"$HOME/tmp\" ] || exit 8\n"
-                        "command -v undeclared-fixture-tool >/dev/null && exit 9\n"
-                        "echo v0.0-fixture\n")
+                        "command -v undeclared-testbed-tool >/dev/null && exit 9\n"
+                        "echo v0.0-testbed\n")
         fake.chmod(0o700)
-        extra = tools / "undeclared-fixture-tool"
+        extra = tools / "undeclared-testbed-tool"
         extra.write_text("#!/bin/sh\nexit 0\n")
         extra.chmod(0o700)
         manifest = {**self.manifest, "verify_tools": ["node"],
                     "checks": [{"role": "tests", "argv": ["node", "--version"]}]}
-        scanner = rc.Scanner(self.fixture.terms)
+        scanner = rc.Scanner(self.testbed.terms)
         with patch.dict(os.environ, {"PATH": "tools" + os.pathsep * 2 + str(tools) + os.pathsep + os.environ["PATH"],
-                                     "CALLER_SECRET": "fixture", "HOME": str(self.root)}), patch.object(rc.shutil, "which", side_effect=AssertionError("manual resolution required")):
+                                     "CALLER_SECRET": "testbed", "HOME": str(self.root)}), patch.object(rc.shutil, "which", side_effect=AssertionError("manual resolution required")):
             result = rc.verify(self.repo, self.reports, scanner, manifest, 30)
         self.assertEqual(result["status"], "pass", scanner.findings)
         self.assertEqual([c["exit_code"] for c in result["commands"]], [0, 0])
-        self.assertEqual(result["commands"][-1]["output_fingerprint"], rc.fingerprint(b"v0.0-fixture\n"))
+        self.assertEqual(result["commands"][-1]["output_fingerprint"], rc.fingerprint(b"v0.0-testbed\n"))
 
     def test_missing_verify_tool_blocks_before_commands(self):
-        scanner = rc.Scanner(self.fixture.terms)
+        scanner = rc.Scanner(self.testbed.terms)
         with patch.object(rc, "command") as run:
             result = rc.verify(self.repo, self.reports, scanner,
-                               {**self.manifest, "verify_tools": ["missing-fixture-tool"]}, 30)
+                               {**self.manifest, "verify_tools": ["missing-testbed-tool"]}, 30)
         self.assertEqual(result["status"], "blocked")
         self.assertEqual(result["commands"], [])
         self.assertEqual([(f["kind"], f["category"], f["path"]) for f in scanner.findings],
@@ -318,10 +318,10 @@ class NodeEcosystemTests(unittest.TestCase):
                 if kind == "directory":
                     candidate.mkdir()
                 elif kind == "plain":
-                    candidate.write_text("fixture")
+                    candidate.write_text("testbed")
                 else:
                     candidate.symlink_to(self.root / "missing")
-                scanner = rc.Scanner(self.fixture.terms)
+                scanner = rc.Scanner(self.testbed.terms)
                 with patch.dict(os.environ, {"PATH": str(tools)}), patch.object(rc, "command") as run:
                     result = rc.verify(self.repo, self.reports, scanner,
                                        {**self.manifest, "verify_tools": ["node"]}, 30)
@@ -352,7 +352,7 @@ class NodeEcosystemTests(unittest.TestCase):
                         (bin_dir / "node").mkdir()
                     return 0, b""
 
-                scanner = rc.Scanner(self.fixture.terms)
+                scanner = rc.Scanner(self.testbed.terms)
                 with patch.dict(os.environ, {"PATH": str(self.root) + os.pathsep + os.environ["PATH"]}), patch.object(rc, "command", side_effect=create_venv) as run:
                     result = rc.verify(self.repo, self.reports, scanner, {**self.manifest, "verify_tools": ["node"]}, 30)
                 self.assertEqual(result["status"], "blocked")
@@ -374,7 +374,7 @@ class NodeEcosystemTests(unittest.TestCase):
             (env_dir / "bin").symlink_to(escaped, target_is_directory=True)
             return 0, b""
 
-        scanner = rc.Scanner(self.fixture.terms)
+        scanner = rc.Scanner(self.testbed.terms)
         with patch.dict(os.environ, {"PATH": str(self.root) + os.pathsep + os.environ["PATH"]}), patch.object(rc, "command", side_effect=create_venv) as run:
             result = rc.verify(self.repo, self.reports, scanner, {**self.manifest, "verify_tools": ["node"]}, 30)
         self.assertEqual(result["status"], "blocked")

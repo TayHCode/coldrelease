@@ -19,9 +19,9 @@ class NpmSourceReviewTests(unittest.TestCase):
         subprocess.run(['git', 'init', '-q', str(self.repo)], check=True)
         shutil.copyfile(Path(rc.__file__).with_name('LICENSE'), self.repo / 'LICENSE')
         self.manifest = {'exclude': [], 'approvals': []}
-        self.package = {'name': 'fixture', 'version': '1.0.0', 'license': 'MIT',
+        self.package = {'name': 'testbed', 'version': '1.0.0', 'license': 'MIT',
                         'dependencies': {'example': '^1.0.0'}}
-        self.lock = {'lockfileVersion': 3, 'name': 'fixture', 'version': '1.0.0',
+        self.lock = {'lockfileVersion': 3, 'name': 'testbed', 'version': '1.0.0',
                      'packages': {'': copy.deepcopy(self.package), 'node_modules/example': {
                          'version': '1.0.0', 'resolved': 'https://registry.npmjs.org/example/-/example-1.0.0.tgz',
                          'integrity': 'sha512-' + 'A' * 86 + '==', 'license': 'MIT'}}}
@@ -32,7 +32,7 @@ class NpmSourceReviewTests(unittest.TestCase):
         (self.repo / 'package-lock.json').write_text(json.dumps(self.lock))
 
     def audit(self, approvals=()):
-        scanner = rc.Scanner(['PrivateFixture'], approvals=approvals)
+        scanner = rc.Scanner(['PrivateTestbed'], approvals=approvals)
         result = rc.license_audit(self.repo, scanner, self.manifest)
         return result, scanner.findings
 
@@ -45,7 +45,7 @@ class NpmSourceReviewTests(unittest.TestCase):
         approval = self.review()
         self.assertNotEqual(approval['fingerprint'], rc.fingerprint(b''))
         self.assertFalse(self.audit()[1][0]['reviewed'])
-        for reason in ('', ' ', None, 7, 'PrivateFixture'):
+        for reason in ('', ' ', None, 7, 'PrivateTestbed'):
             self.assertFalse(self.audit([{**approval, 'reason': reason}])[1][0]['reviewed'])
         result, findings = self.audit([approval])
         self.assertTrue(findings[0]['reviewed'])
@@ -122,7 +122,7 @@ class NpmSourceReviewTests(unittest.TestCase):
         for name in ('node_modules/example/index.js', 'payload.node', 'payload.zip', 'dist/bundle.js', 'payload'):
             path = self.repo / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(b'\x7fELF\x00fixture')
+            path.write_bytes(b'\x7fELF\x00testbed')
             findings = self.audit([approval])[1]
             self.assertTrue(any(f['kind'] == 'dependency-ecosystem-manual-review' and not f['reviewed'] for f in findings))
             path.unlink()
@@ -176,16 +176,16 @@ class NpmSourceReviewTests(unittest.TestCase):
         self.assertEqual(len(evidence['inventory']), 3)
         self.assertEqual(evidence['edges'][-1]['target'], 'node_modules/example/node_modules/child')
 
-    def test_policy_scope_and_config_changes_invalidate_but_approvals_do_not(self):
-        config = self.repo / 'release-check.json'
-        config.write_text(json.dumps(self.manifest))
+    def test_policy_scope_and_manifest_changes_invalidate_but_approvals_do_not(self):
+        manifest_file = self.repo / 'release-check.json'
+        manifest_file.write_text(json.dumps(self.manifest))
         approval = self.review()
-        config.write_text(json.dumps({**self.manifest, 'approvals': [approval]}))
+        manifest_file.write_text(json.dumps({**self.manifest, 'approvals': [approval]}))
         self.assertTrue(self.audit([approval])[1][0]['reviewed'])
         self.manifest['exclude'] = ['other']
         self.assertFalse(self.audit([approval])[1][0]['reviewed'])
         self.manifest['exclude'] = []
-        config.write_text(json.dumps({**self.manifest, 'exclude': ['other']}))
+        manifest_file.write_text(json.dumps({**self.manifest, 'exclude': ['other']}))
         self.assertFalse(self.audit([approval])[1][0]['reviewed'])
 
     def test_symlinks_duplicate_manifest_and_other_locks_block(self):
@@ -209,12 +209,12 @@ class NpmSourceReviewTests(unittest.TestCase):
         self.assertEqual(self.audit()[1][0]['kind'], 'dependency-ecosystem-manual-review')
 
     def test_private_metadata_never_enters_report(self):
-        self.package['description'] = 'PrivateFixture'
-        self.lock['packages']['node_modules/example']['funding'] = 'PrivateFixture'
+        self.package['description'] = 'PrivateTestbed'
+        self.lock['packages']['node_modules/example']['funding'] = 'PrivateTestbed'
         self.write()
         result, findings = self.audit()
         self.assertEqual(findings[0]['kind'], 'npm-source-declarations-review')
-        self.assertNotIn('PrivateFixture', json.dumps([result, findings]))
+        self.assertNotIn('PrivateTestbed', json.dumps([result, findings]))
 
     def test_scope_rejects_unknown_binary_even_without_extension(self):
         (self.repo / 'payload').write_bytes(b'\xff\xfe\x00\x01')
@@ -256,7 +256,7 @@ class NpmSourceReviewTests(unittest.TestCase):
             approval = {**findings[0], 'reason': 'Reviewed this exact source distribution and retained notices.'}
             report['license'], report['findings'] = self.audit([approval])
             self.assertEqual(rc.outcome(report)['outcome'], 'PASS')
-            (self.repo / 'payload.node').write_bytes(b'\x7fELF\0fixture')
+            (self.repo / 'payload.node').write_bytes(b'\x7fELF\0testbed')
             report['license'], report['findings'] = self.audit([approval])
             self.assertEqual(rc.outcome(report)['outcome'], 'INCOMPLETE')
             (self.repo / 'payload.node').unlink()
@@ -322,7 +322,7 @@ class NpmSourceReviewTests(unittest.TestCase):
         self.assertFalse(self.audit([approval])[1][0]['reviewed'])
 
     def upgrade_for(self, approval):
-        scanner = rc.Scanner(['PrivateFixture'], approvals=[approval])
+        scanner = rc.Scanner(['PrivateTestbed'], approvals=[approval])
         rc.license_audit(self.repo, scanner, self.manifest)
         return scanner.fingerprint_upgrades
 
@@ -341,7 +341,7 @@ class NpmSourceReviewTests(unittest.TestCase):
         for modes in ((0o600, 0o700), (0o664, 0o775)):
             with self.subTest(modes=modes):
                 self.set_modes(*modes)
-                scanner = rc.Scanner(['PrivateFixture'], approvals=[upgraded])
+                scanner = rc.Scanner(['PrivateTestbed'], approvals=[upgraded])
                 result = rc.license_audit(self.repo, scanner, self.manifest)
                 self.assertTrue(scanner.findings[0]['reviewed'])
                 self.assertEqual(result['dependencies'], 'pass')
@@ -349,7 +349,7 @@ class NpmSourceReviewTests(unittest.TestCase):
 
     def test_new_fingerprint_review_and_unreviewed_finding_list_no_upgrade(self):
         self.assertEqual(self.upgrade_for(self.review()), [])
-        scanner = rc.Scanner(['PrivateFixture'])
+        scanner = rc.Scanner(['PrivateTestbed'])
         rc.license_audit(self.repo, scanner, self.manifest)
         self.assertEqual(scanner.fingerprint_upgrades, [])
 
@@ -359,9 +359,9 @@ class NpmSourceReviewTests(unittest.TestCase):
         approval = self.legacy_review()
         subprocess.run(['git', '-C', str(self.repo), 'add', '-A'], check=True)
         subprocess.run(['git', '-C', str(self.repo), '-c', 'user.name=t', '-c', ('user.email=t@ex' + 'ample.com'),
-                        'commit', '-qm', 'fixture'], check=True)
+                        'commit', '-qm', 'testbed'], check=True)
         with tempfile.TemporaryDirectory() as reports:
-            report = rc.audit(self.repo, ['PrivateFixture'], {**self.manifest, 'approvals': [approval]}, [], False, Path(reports), 10)
+            report = rc.audit(self.repo, ['PrivateTestbed'], {**self.manifest, 'approvals': [approval]}, [], False, Path(reports), 10)
         self.assertEqual([u['legacy_fingerprint'] for u in report['fingerprint_upgrades']], [approval['fingerprint']])
         hint = rc.fingerprint_upgrade_hint([report, report])
         self.assertTrue(hint.startswith('1 source review(s) matched only a legacy fingerprint'))
